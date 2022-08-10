@@ -55,9 +55,3 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
-
-
-# not sure what are these files
-build/.cmake/api/v1/query
-build/.cmake/api/v1/reply
-
