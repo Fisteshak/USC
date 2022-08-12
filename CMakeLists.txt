@@ -4,13 +4,17 @@ project(USC VERSION 0.1.0)
 include(CTest)
 enable_testing()
 
+
+add_library(LibUServer STATIC server/UServer.cpp)
+add_library(LibUClient STATIC client/UClient.cpp)
+
 add_executable(server server/main.cpp)
 add_executable(client client/main.cpp)
 
 find_package(LIBEVENT REQUIRED)
 
-target_link_libraries(server libevent::core)
-target_link_libraries(client libevent::core)
+target_link_libraries(server libevent::core LibUServer)
+target_link_libraries(client libevent::core LibUClient)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
