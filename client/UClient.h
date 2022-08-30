@@ -11,15 +11,5 @@ public:
     ~UClient();
 };
 
-
-UClient::UClient(/* args */)
-{
-}
-
-
-UClient::~UClient()
-{
-}
-
-
-
+bool initWinsock();  //Инициализирует сетевой интерфейс для сокетов.
+                     //Возвращает true в случае успеха, false в случае неудачи.
