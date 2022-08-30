@@ -5,7 +5,7 @@
 #include "event2/bufferevent.h"
 #include "event2/buffer.h"
 
-//если есть данные для чтения из буфера
+//РµСЃР»Рё РµСЃС‚СЊ РґР°РЅРЅС‹Рµ РґР»СЏ С‡С‚РµРЅРёСЏ РёР· Р±СѓС„РµСЂР°
 static void echo_read_cb(struct bufferevent *bev, void *ctx)
 {
     /* This callback is invoked when there is data to read on bev. */
@@ -13,7 +13,7 @@ static void echo_read_cb(struct bufferevent *bev, void *ctx)
     struct evbuffer *output = bufferevent_get_output(bev);
 
 
-    //прочитать и вывести данные из буфера
+    //РїСЂРѕС‡РёС‚Р°С‚СЊ Рё РІС‹РІРµСЃС‚Рё РґР°РЅРЅС‹Рµ РёР· Р±СѓС„РµСЂР°
     size_t len = evbuffer_get_length(input);
     void *data;
 
@@ -30,7 +30,7 @@ static void echo_read_cb(struct bufferevent *bev, void *ctx)
     /* Copy all the data from the input buffer to the output buffer. */
     evbuffer_add_buffer(output, input);
 }
-//при событии или ошибке
+//РїСЂРё СЃРѕР±С‹С‚РёРё РёР»Рё РѕС€РёР±РєРµ
 static void echo_event_cb(struct bufferevent *bev, short events, void *ctx)
 {
     if (events & BEV_EVENT_ERROR)
@@ -41,20 +41,20 @@ static void echo_event_cb(struct bufferevent *bev, short events, void *ctx)
     }
 }
 
-//при подключении нового клиента
+//РїСЂРё РїРѕРґРєР»СЋС‡РµРЅРёРё РЅРѕРІРѕРіРѕ РєР»РёРµРЅС‚Р°
 static void accept_conn_cb(evconnlistener *listener, evutil_socket_t fd,
                            sockaddr *address, int socklen, void *ctx)
 {
-    //получить base от listener
+    //РїРѕР»СѓС‡РёС‚СЊ base РѕС‚ listener
     event_base *base = evconnlistener_get_base(listener);
-    //создать новый сокет-буферевент
+    //СЃРѕР·РґР°С‚СЊ РЅРѕРІС‹Р№ СЃРѕРєРµС‚-Р±СѓС„РµСЂРµРІРµРЅС‚
     bufferevent *bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
-    //установить обработчики для чтения и события
+    //СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РѕР±СЂР°Р±РѕС‚С‡РёРєРё РґР»СЏ С‡С‚РµРЅРёСЏ Рё СЃРѕР±С‹С‚РёСЏ
     bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, NULL);
 
     bufferevent_enable(bev, EV_READ | EV_WRITE);
 }
-//при ошибке на слушающем сокете
+//РїСЂРё РѕС€РёР±РєРµ РЅР° СЃР»СѓС€Р°СЋС‰РµРј СЃРѕРєРµС‚Рµ
 static void accept_error_cb(struct evconnlistener *listener, void *ctx)
 {
     struct event_base *base = evconnlistener_get_base(listener);
@@ -62,7 +62,7 @@ static void accept_error_cb(struct evconnlistener *listener, void *ctx)
     fprintf(stderr, "Got an error %d (%s) on the listener. "
                     "Shutting down.\n",
             err, evutil_socket_error_to_string(err));
-    //завершить цикл событий
+    //Р·Р°РІРµСЂС€РёС‚СЊ С†РёРєР» СЃРѕР±С‹С‚РёР№
     event_base_loopexit(base, NULL);
 }
 
@@ -72,8 +72,8 @@ int main(int argc, char **argv)
 
     int port = 9554;
 
-    //проверить передеаны ли аргументы
-    //если да, то установить порт
+    //РїСЂРѕРІРµСЂРёС‚СЊ РїРµСЂРµРґРµР°РЅС‹ Р»Рё Р°СЂРіСѓРјРµРЅС‚С‹
+    //РµСЃР»Рё РґР°, С‚Рѕ СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РїРѕСЂС‚
     if (argc > 1)
     {
         port = atoi(argv[1]);
@@ -84,9 +84,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    struct event_base *base;         //структура событий
-    struct evconnlistener *listener; //принимающий сокет
-    struct sockaddr_in list_inf;     //информация для listener
+    struct event_base *base;         //СЃС‚СЂСѓРєС‚СѓСЂР° СЃРѕР±С‹С‚РёР№
+    struct evconnlistener *listener; //РїСЂРёРЅРёРјР°СЋС‰РёР№ СЃРѕРєРµС‚
+    struct sockaddr_in list_inf;     //РёРЅС„РѕСЂРјР°С†РёСЏ РґР»СЏ listener
 
     base = event_base_new();
 
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     list_inf.sin_family = AF_INET;
     list_inf.sin_addr = serv_ip;
     list_inf.sin_port = htons(port);
-    //установить сокет-слушатель
+    //СѓСЃС‚Р°РЅРѕРІРёС‚СЊ СЃРѕРєРµС‚-СЃР»СѓС€Р°С‚РµР»СЊ
     listener = evconnlistener_new_bind(base, accept_conn_cb,
                                        NULL, LEV_OPT_CLOSE_ON_FREE | LEV_OPT_REUSEABLE,
                                        -1, (sockaddr *)&list_inf, sizeof(list_inf));
@@ -109,10 +109,10 @@ int main(int argc, char **argv)
         perror("Could not create listener");
         return 1;
     }
-    //установить обработчик ошибок на сокете-слушателе
+    //СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РѕР±СЂР°Р±РѕС‚С‡РёРє РѕС€РёР±РѕРє РЅР° СЃРѕРєРµС‚Рµ-СЃР»СѓС€Р°С‚РµР»Рµ
     evconnlistener_set_error_cb(listener, accept_error_cb);
 
-    //завершить цикл событий
+    //Р·Р°РІРµСЂС€РёС‚СЊ С†РёРєР» СЃРѕР±С‹С‚РёР№
     event_base_dispatch(base);
     std::cout << "server finished working";
     return 0;
