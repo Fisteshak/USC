@@ -5,6 +5,8 @@
 #include "event2/bufferevent.h"
 #include "event2/buffer.h"
 
+using std::endl, std::cin, std::cout;
+
 //если есть данные для чтения из буфера
 static void echo_read_cb(struct bufferevent *bev, void *ctx)
 {
@@ -33,12 +35,19 @@ static void echo_read_cb(struct bufferevent *bev, void *ctx)
 //при событии или ошибке
 static void echo_event_cb(struct bufferevent *bev, short events, void *ctx)
 {
-    if (events & BEV_EVENT_ERROR)
-        perror("Error from bufferevent");
+    if (events & BEV_EVENT_ERROR) {  
+        if (EVUTIL_SOCKET_ERROR() == 10054) 
+            cout << "Client has disconnected!" << endl;
+        else 
+            cout  << "Error has happened" << endl;
+    }
+
     if (events & (BEV_EVENT_EOF | BEV_EVENT_ERROR))
     {
-        bufferevent_free(bev);
+        bufferevent_free(bev);      //закрыть сокет буферевента
+        
     }
+
 }
 
 //при подключении нового клиента
@@ -53,6 +62,8 @@ static void accept_conn_cb(evconnlistener *listener, evutil_socket_t fd,
     bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, NULL);
 
     bufferevent_enable(bev, EV_READ | EV_WRITE);
+
+    cout << "CLient has connected" << endl;
 }
 //при ошибке на слушающем сокете
 static void accept_error_cb(struct evconnlistener *listener, void *ctx)
@@ -68,7 +79,11 @@ static void accept_error_cb(struct evconnlistener *listener, void *ctx)
 
 int main(int argc, char **argv)
 {
-    initWinsock();
+
+    if (!initWinsock()) {
+        perror("Failed to initialize Winsock");
+        return 1;        
+    }
 
     int port = 9554;
 
@@ -114,6 +129,7 @@ int main(int argc, char **argv)
 
     //завершить цикл событий
     event_base_dispatch(base);
+    
     std::cout << "server finished working";
     return 0;
 }
