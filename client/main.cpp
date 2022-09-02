@@ -5,9 +5,11 @@
 #include "event2/bufferevent.h"
 #include "event2/buffer.h"
 
+#include <thread>
+
 using std::cout, std::cin, std::endl;
 
-void eventcb(struct bufferevent *bev, short events, void *ptr)
+void event_cb(struct bufferevent *bev, short events, void *ptr)
 {
     if (events & BEV_EVENT_CONNECTED) {
          /* We're connected to 127.0.0.1   Ordinarily we'd do
@@ -29,6 +31,11 @@ void eventcb(struct bufferevent *bev, short events, void *ptr)
 
 }
 
+
+void libev_start(event_base *base)
+{
+    event_base_dispatch(base);    
+}
 
 int main()
 {
@@ -56,7 +63,7 @@ int main()
 
     bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
 
-    bufferevent_setcb(bev, NULL, NULL, eventcb, NULL);  
+    bufferevent_setcb(bev, NULL, NULL, event_cb, NULL);  
 
     if (bufferevent_socket_connect(bev,
         (struct sockaddr *)&cl_inf, sizeof(cl_inf)) < 0) {
@@ -68,8 +75,11 @@ int main()
 
     bufferevent_enable(bev, EV_READ | EV_WRITE);
 
-    event_base_dispatch(base);
     
+    std::thread libevthr(libev_start, base);
+    
+
+    libevthr.join();        
     std::cout << "client finished working";
 
     return 0;
