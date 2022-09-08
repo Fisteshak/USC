@@ -10,6 +10,7 @@ using std::endl, std::cin, std::cout;
 //если есть данные для чтения из буфера
 static void echo_read_cb(struct bufferevent *bev, void *ctx)
 {
+    
     /* This callback is invoked when there is data to read on bev. */
     struct evbuffer *input = bufferevent_get_input(bev);
     struct evbuffer *output = bufferevent_get_output(bev);

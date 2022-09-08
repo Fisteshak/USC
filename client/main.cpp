@@ -14,22 +14,29 @@ void event_cb(struct bufferevent *bev, short events, void *ptr)
     if (events & BEV_EVENT_CONNECTED) {
          /* We're connected to 127.0.0.1   Ordinarily we'd do
             something here, like start reading or writing. */
+        bufferevent_write(bev, "Hello, world!", 3);
         std::cout << "Connected" << std::endl;
     }
     
     if (events & BEV_EVENT_ERROR) {  
         if (EVUTIL_SOCKET_ERROR() == 10054) 
-            cout << "Client has disconnected!" << endl;
+            cout << "Server stopped working!" << endl;
         else 
             cout  << "Error has happened" << endl;
     }
 
     if (events & (BEV_EVENT_EOF | BEV_EVENT_ERROR))
     {
-        bufferevent_free(bev);      //çàâåðøèòü öèêë ñîáûòèé â ñëó÷àå îøèáêè
+        bufferevent_free(bev);      //Ð·Ð°Ð²ÐµÑ€ÑˆÐ¸Ñ‚ÑŒ Ñ†Ð¸ÐºÐ» ÑÐ¾Ð±Ñ‹Ñ‚Ð¸Ð¹ Ð² ÑÐ»ÑƒÑ‡Ð°Ðµ Ð¾ÑˆÐ¸Ð±ÐºÐ¸
     } 
 
 }
+
+void write_cb(struct bufferevent *bev, void *ctx)
+{
+    cout << 'Data was written' << endl;
+}
+
 
 
 void libev_start(event_base *base)
@@ -41,9 +48,9 @@ int main()
 {
     int port = 9554;
     
-    struct event_base *base;         //ñòðóêòóðà ñîáûòèé
-    struct bufferevent *bev;        //ñîêåò äëÿ ïåðåäà÷è äàííûõ
-    struct sockaddr_in cl_inf;     //èíôîðìàöèÿ äëÿ listener    
+    struct event_base *base;         //ÑÑ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð° ÑÐ¾Ð±Ñ‹Ñ‚Ð¸Ð¹
+    struct bufferevent *bev;        //ÑÐ¾ÐºÐµÑ‚ Ð´Ð»Ñ Ð¿ÐµÑ€ÐµÐ´Ð°Ñ‡Ð¸ Ð´Ð°Ð½Ð½Ñ‹Ñ…
+    struct sockaddr_in cl_inf;     //Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ñ Ð´Ð»Ñ listener    
 
     if (!initWinsock()) {
         perror("Failed to initialize Winsock");
@@ -63,7 +70,7 @@ int main()
 
     bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
 
-    bufferevent_setcb(bev, NULL, NULL, event_cb, NULL);  
+    bufferevent_setcb(bev, NULL, write_cb, event_cb, NULL);  
 
     if (bufferevent_socket_connect(bev,
         (struct sockaddr *)&cl_inf, sizeof(cl_inf)) < 0) {
@@ -76,12 +83,16 @@ int main()
     bufferevent_enable(bev, EV_READ | EV_WRITE);
 
     
-    std::thread libevthr(libev_start, base);
-    
+    std::thread libevthr(libev_start, base);    
 
+    std::string s;
+    do
+    {
+        cin >> s;
+    } while(s != "xxx");
+    
     libevthr.join();        
     std::cout << "client finished working";
-
     return 0;
 
 }

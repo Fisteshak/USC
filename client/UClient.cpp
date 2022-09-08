@@ -19,7 +19,7 @@ UClient::~UClient()
 bool initWinsock()
 {
     WSADATA wsaData;
-    WORD ver = MAKEWORD(2, 2); //версия Winsock
+    WORD ver = MAKEWORD(2, 2); //РІРµСЂСЃРёСЏ Winsock
     if (WSAStartup(ver, &wsaData) != 0)
     {
         std::cout << "Error: can't initialize winsock!" << WSAGetLastError();        
