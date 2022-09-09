@@ -10,12 +10,10 @@ add_library(LibUClient STATIC client/UClient.cpp)
 add_executable(server server/main.cpp)
 add_executable(client client/main.cpp)
 
-find_package(LIBEVENT REQUIRED)
-
-target_link_libraries(server libevent::core LibUServer ws2_32)
-target_link_libraries(client libevent::core LibUClient ws2_32)
-target_link_libraries(LibUServer libevent::core ws2_32)
-target_link_libraries(LibUClient libevent::core ws2_32)
+target_link_libraries(server LibUServer ws2_32)
+target_link_libraries(client LibUClient ws2_32)
+target_link_libraries(LibUServer ws2_32)
+target_link_libraries(LibUClient ws2_32)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
