@@ -8,82 +8,105 @@
 #include <iostream>
 #include <string>
 
-UServer::UServer(int listenerPort, std::string listenerIP) : listenerPort(listenerPort), listenerIP(listenerIP)
+UServer::UServer(int listenerPort, std::string listenerIP, uint32_t max_connections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
-    
+    if (max_connections == 0) {
+        throw std::runtime_error("max_connections value should not be zero");
+    }
+    if (max_connections > SOMAXCONN) {
+        throw std::runtime_error("max_connections value is too big");
+    }
+    this->max_connections = max_connections;
 }
 
 UServer::~UServer()
 {
 }
-
-bool UServer::initWinsock()  //Инициализирует сетевой интерфейс для сокетов.
-                         //Возвращает true в случае успеха, false в случае неудачи.
+//Инициализирует сетевой интерфейс для сокетов.
+//Возвращает true в случае успеха, false в случае неудачи.
+bool UServer::initWinsock()  
 {
     WSADATA wsaData;
     WORD ver = MAKEWORD(2, 2); //версия Winsock
     if (WSAStartup(ver, &wsaData) != 0)
-    {
-        std::cout << "Error: can't initialize winsock!" << WSAGetLastError();        
+    {        
         return false;
     }
     return true;
 }
 
-SOCKET UServer::createListener() // создает сокет-слушатель    
+//закрывает интерфейсы winsock
+void UServer::cleanupWinsock()   
 {
+    WSACleanup();
+}
+
+// создает сокет-слушатель    
+SOCKET UServer::createListener() 
+{
+    //создать сокет
     SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener == INVALID_SOCKET) return INVALID_SOCKET;
+
+    //позволяет системе использовать только что закрытое соединение
+    //(например в случае быстрого перезапуска программы)
+	int on = 1;
+	if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on)) < 0)
+	{		
+		closesocket(listener);		
+		return INVALID_SOCKET;
+	}
+
+    //перевести сокет в неблокирующий режим
+    DWORD nonBlocking = 1;
+    if (ioctlsocket(listener, FIONBIO, &nonBlocking) < 0)
+    {    
+        closesocket(listener);
+		return INVALID_SOCKET;            
+    }
+
+    //преобразовать IP в структуру in_addr 
     in_addr serv_ip;
 
-    
 	if (inet_pton(AF_INET, listenerIP.data(), &serv_ip) <= 0) {
         closesocket(listener);
 		return INVALID_SOCKET;
 	}
 
-	// int on = 1;
+	//привязка к сокету адреса и порта
+	sockaddr_in servInfo;
 
-	// if (setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on)) < 0)
-	// {
-	// 	perror("setsockopt() failed");
-	// 	closesocket(listenSock);
-	// 	cin.get();
-	// 	exit(1);
-	// }
+	ZeroMemory(&servInfo, sizeof(servInfo));    //обнулить
 
-	// //перевести в неблок режим
-	// DWORD nonBlocking = 1;
-	// if (ioctlsocket(listenSock, FIONBIO, &nonBlocking) != 0)
-	// {
-	// 	cout << "Ошибка при переводе сокета в неблокирующий режим " << WSAGetLastError() << endl;
-	// 	cin.get();
-	// 	exit(1);
-	// }
+	servInfo.sin_family = AF_INET;
+	servInfo.sin_port = htons(listenerPort);
+	servInfo.sin_addr = serv_ip;
 
-	// //привязка к сокету адреса и порта
-	// sockaddr_in servInfo;
+	int servInfoLen = sizeof(servInfo);
 
-	// ZeroMemory(&servInfo, sizeof(servInfo));    //обнулить
+	if (bind(listener, (sockaddr*)&servInfo, servInfoLen) != 0) {
+		closesocket(listener);
+		cleanupWinsock();	
+		return INVALID_SOCKET;
+	}
 
-	// servInfo.sin_family = AF_INET;
-	// servInfo.sin_port = htons(PORT);
-	// servInfo.sin_addr = serv_ip;
+    
+    if (listen(listener, SOMAXCONN) < 0)
+    {
+        closesocket(listener);
+		cleanupWinsock();	
+		return INVALID_SOCKET;    
+    }
 
-	// int servInfoLen = sizeof(servInfo);
+    return listener;
+}
+//запускает сервер (цикл приема данных)
+void UServer::run()
+{
+    SOCKET listener = createListener();  //создать сокет-слушатель
 
-	// if (bind(listenSock, (sockaddr*)&servInfo, servInfoLen) != 0) {
-	// 	cout << "Ошибка привязки сокета к порту и IP-адресу " << WSAGetLastError() << endl;
-	// 	closesocket(listenSock);
-	// 	WSACleanup();
-	// 	cin.get();
-	// 	exit(1);
-	// }
-	// else if (debug)
-	// 	cout << "Сокет успешно привязан" << endl;
+    
 
 
 }
-
-
 

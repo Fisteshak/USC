@@ -1,11 +1,17 @@
 #include "UServer.h"
 #include <memory>
+#include <thread>
 int main()
 {
-    //UServer* server = new UServer();
 
-    //std::unique_ptr <UServer> server(new UServer());
-    //server->initWinsock();
-    
+    //std::unique_ptr <UServer> server(new UServer(8159, "127.0.0.1", 50));
+    UServer server(8159, "127.0.0.1", 50);
+    if (server.initWinsock()) {
+
+        std::thread servthr(&UServer::run, &server);
+        servthr.join();
+
+    }
+
 
 }

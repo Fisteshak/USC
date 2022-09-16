@@ -5,19 +5,30 @@
 #include <string>
 #include <memory>
 
-constexpr int max_connections = 100;
+
 class UServer
 {
 
 public:
-    UServer(int listenerPort, std::string listenerIP);
+    //конструктор с указанием
+    //порта
+    //IP
+    //максимального кол-ва соединенией (опционально)
+    UServer(int listenerPort, std::string listenerIP, uint32_t max_connections = 100);
+    //деструктор
     ~UServer();
-    bool initWinsock();  //Инициализирует сетевой интерфейс для сокетов.
-                         //Возвращает true в случае успеха, false в случае неудачи.
-    SOCKET createListener(); // создает сокет-слушатель    
+    //Инициализирует сетевой интерфейс для сокетов.
+    //Возвращает true в случае успеха, false в случае неудачи.
+    bool initWinsock();
+    // создает сокет-слушатель    
+    SOCKET createListener(); 
+    //закрывает интерфейсы winsock
+    void cleanupWinsock();  
+    //запускает сервер (цикл приема данных) 
+    void run();             
 
 private:        
-    struct pollfd fds[max_connections];
+    int max_connections;
     int listenerPort;
     std::string listenerIP;    
 };
