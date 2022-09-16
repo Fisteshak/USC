@@ -4,12 +4,22 @@
 #include "windows.h"
 #include <string>
 #include <memory>
+#include <atomic>
 
 
 class UServer
 {
 
 public:
+    enum status : uint8_t {
+        up = 0,
+        stopped = 1,
+        error_listener_create = 2,
+        error_accept_connection = 3,
+        error_winsock_init = 5,
+        error = 4
+    };
+
     //конструктор с указанием
     //порта
     //IP
@@ -24,13 +34,20 @@ public:
     SOCKET createListener(); 
     //закрывает интерфейсы winsock
     void cleanupWinsock();  
+    //цикл приема данных
+    status handlingLoop();
     //запускает сервер (цикл приема данных) 
-    void run();             
+    status run();  
+    //останавливает сервер
+    void stop(); 
 
+
+    
 private:        
-    int max_connections;
-    int listenerPort;
-    std::string listenerIP;    
+    int max_connections;               
+    int listenerPort;                  //Port слушателя (сервера) 
+    std::string listenerIP;            //IP слушателя (сервера) 
+    std::atomic <status> _status = status::stopped;   //статус сервера
 };
 
 

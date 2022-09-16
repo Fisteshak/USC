@@ -2,11 +2,10 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include "windows.h"
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include "windows.h"
 #include <iostream>
 #include <string>
+#include <atomic>
+#include <thread>
 
 UServer::UServer(int listenerPort, std::string listenerIP, uint32_t max_connections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
@@ -44,7 +43,8 @@ void UServer::cleanupWinsock()
 // создает сокет-слушатель    
 SOCKET UServer::createListener() 
 {
-    //создать сокет
+
+    //создать сокет	
     SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener == INVALID_SOCKET) return INVALID_SOCKET;
 
@@ -100,13 +100,41 @@ SOCKET UServer::createListener()
 
     return listener;
 }
-//запускает сервер (цикл приема данных)
-void UServer::run()
+void UServer::stop()
 {
+	_status = status::stopped;
+}       
+
+
+UServer::status UServer::handlingLoop()
+{
+	while (_status == status::up) {
+	
+	
+	
+	}
+
+}
+
+
+//запускает сервер (цикл приема данных)
+UServer::status UServer::run()
+{
+	_status = status::up;	
+
+	//инициализоровать Winsock
+	if (!initWinsock()) {
+		return status::error_winsock_init;
+	}
+
     SOCKET listener = createListener();  //создать сокет-слушатель
 
-    
+	if (listener == INVALID_SOCKET) {
+		std::cout << "create listener error" << std::endl;
+		return error_listener_create;
+	}
 
-
+	std::thread hadlingLoopThread(handlingLoop);
+	
 }
 
