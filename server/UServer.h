@@ -5,7 +5,8 @@
 #include <string>
 #include <memory>
 #include <atomic>
-
+#include <thread>
+#include <vector>
 
 class UServer
 {
@@ -31,23 +32,28 @@ public:
     //Возвращает true в случае успеха, false в случае неудачи.
     bool initWinsock();
     // создает сокет-слушатель    
-    SOCKET createListener(); 
+    SOCKET createListener();
     //закрывает интерфейсы winsock
-    void cleanupWinsock();  
+    void cleanupWinsock();
     //цикл приема данных
-    status handlingLoop();
+    void handlingLoop();
     //запускает сервер (цикл приема данных) 
-    status run();  
+    status run();
     //останавливает сервер
     void stop(); 
-
-
+    //завершить все потоки
+    void joinThreads();
     
 private:        
-    int max_connections;               
+    int max_connections = 0;
     int listenerPort;                  //Port слушателя (сервера) 
     std::string listenerIP;            //IP слушателя (сервера) 
     std::atomic <status> _status = status::stopped;   //статус сервера
+    std::thread handlingLoopThread;
+	std::vector <struct pollfd> fds;
+
 };
+
+void aa();
 
 

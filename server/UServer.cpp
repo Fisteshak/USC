@@ -103,17 +103,28 @@ SOCKET UServer::createListener()
 void UServer::stop()
 {
 	_status = status::stopped;
+
+	//closesocket(listener);
+
+	joinThreads();
+
 }       
 
-
-UServer::status UServer::handlingLoop()
+void UServer::joinThreads()
 {
-	while (_status == status::up) {
+	handlingLoopThread.join();
+}
+
+void UServer::handlingLoop()
+{
 	
+	fds.resize(10);
+	while (_status == status::up) {
+		WSAPoll(fds.data(), fds.size(), -1);   //ждать входящих событий		
 	
 	
 	}
-
+	return;
 }
 
 
@@ -124,17 +135,17 @@ UServer::status UServer::run()
 
 	//инициализоровать Winsock
 	if (!initWinsock()) {
-		return status::error_winsock_init;
+		return _status = status::error_winsock_init;
 	}
 
     SOCKET listener = createListener();  //создать сокет-слушатель
 
 	if (listener == INVALID_SOCKET) {
 		std::cout << "create listener error" << std::endl;
-		return error_listener_create;
-	}
+		return _status = error_listener_create;
+	}	
+	//запустить поток обработки входящих сообщений
+	handlingLoopThread = std::thread(&handlingLoop, this);		
 
-	std::thread hadlingLoopThread(handlingLoop);
-	
+	return _status;
 }
-
