@@ -18,6 +18,7 @@ public:
         error_listener_create = 2,
         error_accept_connection = 3,
         error_winsock_init = 5,
+        error_wsapoll = 6,
         error = 4
     };
 
@@ -45,13 +46,19 @@ public:
     void joinThreads();
     
 private:        
-    int max_connections = 0;
-    int listenerPort;                  //Port слушателя (сервера) 
-    std::string listenerIP;            //IP слушателя (сервера) 
-    std::atomic <status> _status = status::stopped;   //статус сервера
-    std::thread handlingLoopThread;
-	std::vector <struct pollfd> fds;
-
+    int max_connections;
+    //Port слушателя (сервера)
+    int listenerPort;                  
+    //IP слушателя (сервера) 
+    std::string listenerIP;            
+    //статус сервера
+    std::atomic <status> _status = status::stopped;
+    //потое обработки данных
+    std::thread handlingLoopThread;     
+    //массив дескрипторов сокетов
+	std::vector <struct pollfd> fds;    
+    //сокет-слушатель
+    SOCKET listener;                    
 };
 
 void aa();

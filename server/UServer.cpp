@@ -116,11 +116,45 @@ void UServer::joinThreads()
 }
 
 void UServer::handlingLoop()
-{
-	
-	fds.resize(10);
+{	
 	while (_status == status::up) {
-		WSAPoll(fds.data(), fds.size(), -1);   //ждать входящих событий		
+        uint32_t events_num;    //количество полученных событий от сокетов
+		events_num = WSAPoll(fds.data(), fds.size(), -1);   //ждать входящих событий		
+
+        if (events_num == SOCKET_ERROR) {
+            _status = status::error_wsapoll;
+            return;
+        }
+        
+        int handled_events = 0;
+
+        //если на слушателе есть событие, то это входящее соединение        
+        if (fds[0].revents == POLLIN) {    
+            
+            while (true) {
+                SOCKET new_conn = accept(listener, NULL, NULL);
+                if (new_conn == INVALID_SOCKET) {   //если accept возвратил INVALID_SOCKET, то все соединения приняты
+                    if (WSAGetLastError() != EWOULDBLOCK) { _status = status::error_accept_connection; }                                        
+                    break;
+                }
+                fds.push_back({new_conn, POLLIN, 0});  
+            }         
+
+            fds[0].revents = 0;
+        }
+
+        if (_status != status::up) break;
+
+
+
+        for (int i = 1; handled_events < events_num; i++) {  
+            std::vector <char> data_buf;
+            if (fds[i].revents == POLLIN)
+            {
+                
+            }
+
+        }
 	
 	
 	}
@@ -140,12 +174,16 @@ UServer::status UServer::run()
 
     SOCKET listener = createListener();  //создать сокет-слушатель
 
+    fds.push_back({listener, POLLIN, 0});  //поместить слушателя в начало массива дескрипторов сокетов    
+    this->listener = listener;
+
 	if (listener == INVALID_SOCKET) {
 		std::cout << "create listener error" << std::endl;
 		return _status = error_listener_create;
 	}	
 	//запустить поток обработки входящих сообщений
-	handlingLoopThread = std::thread(&handlingLoop, this);		
+	handlingLoopThread = std::thread(&handlingLoop, this);
+
 
 	return _status;
 }
