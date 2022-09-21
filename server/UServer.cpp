@@ -9,6 +9,7 @@
 
 UServer::UServer(int listenerPort, std::string listenerIP, uint32_t max_connections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
+	
     if (max_connections == 0) {
         throw std::runtime_error("max_connections value should not be zero");
     }
@@ -115,6 +116,18 @@ void UServer::joinThreads()
 	handlingLoopThread.join();
 }
 
+uint32_t UServer::get_block_size()
+{
+	return block_size;
+}
+
+void UServer::set_block_size(uint32_t size)
+{
+	block_size = size;
+}
+
+
+
 void UServer::handlingLoop()
 {	
 	while (_status == status::up) {
@@ -132,12 +145,12 @@ void UServer::handlingLoop()
         if (fds[0].revents == POLLIN) {    
             
             while (true) {
-                SOCKET new_conn = accept(listener, NULL, NULL);
+                SOCKET new_conn = accept(listener, NULL, NULL);  //принять соединение
                 if (new_conn == INVALID_SOCKET) {   //если accept возвратил INVALID_SOCKET, то все соединения приняты
                     if (WSAGetLastError() != EWOULDBLOCK) { _status = status::error_accept_connection; }                                        
                     break;
                 }
-                fds.push_back({new_conn, POLLIN, 0});  
+                fds.push_back({new_conn, POLLIN, 0});     //добавить в массив
             }         
 
             fds[0].revents = 0;
@@ -145,13 +158,18 @@ void UServer::handlingLoop()
 
         if (_status != status::up) break;
 
-
-
-        for (int i = 1; handled_events < events_num; i++) {  
-            std::vector <char> data_buf;
-            if (fds[i].revents == POLLIN)
+		//перебрать все сокеты до тех пор пока не обработаем все полученные события
+        for (int i = 1; handled_events < events_num; i++) {
+            std::vector <char> data_buf(block_size);		//буфер для данных
+            if (fds[i].revents == POLLIN)       //если есть входящие данные
             {
-                
+                int recieved_data;		//количество прочитанных байт
+				recieved_data = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать
+
+				
+
+				
+
             }
 
         }
@@ -183,7 +201,6 @@ UServer::status UServer::run()
 	}	
 	//запустить поток обработки входящих сообщений
 	handlingLoopThread = std::thread(&handlingLoop, this);
-
 
 	return _status;
 }

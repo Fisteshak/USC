@@ -7,6 +7,7 @@
 #include <atomic>
 #include <thread>
 #include <vector>
+#include <functional>
 
 class UServer
 {
@@ -43,7 +44,9 @@ public:
     //останавливает сервер
     void stop(); 
     //завершить все потоки
-    void joinThreads();
+    void joinThreads();    
+    uint32_t get_block_size();
+    void set_block_size(uint32_t size);
     
 private:        
     int max_connections;
@@ -58,7 +61,15 @@ private:
     //массив дескрипторов сокетов
 	std::vector <struct pollfd> fds;    
     //сокет-слушатель
-    SOCKET listener;                    
+    SOCKET listener;    
+    //                
+    uint32_t block_size;
+    //
+    std::function <void()> data_handler;
+    std::function <void()> conn_handler;
+
+
+
 };
 
 void aa();
