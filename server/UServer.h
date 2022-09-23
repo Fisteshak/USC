@@ -11,6 +11,13 @@
 
 class UServer
 {
+public:
+    //тип буфера для данных
+    typedef std::vector <char> data_buffer_t;    
+
+private:
+    //тип обработчика данных
+    typedef std::function <void(data_buffer_t&)> data_handler_t;
 
 public:
     enum status : uint8_t {
@@ -48,7 +55,11 @@ public:
     uint32_t get_block_size();
     void set_block_size(uint32_t size);
     
-private:        
+    //
+    void set_data_handler(data_handler_t handler);
+
+private:            
+
     int max_connections;
     //Port слушателя (сервера)
     int listenerPort;                  
@@ -62,16 +73,15 @@ private:
 	std::vector <struct pollfd> fds;    
     //сокет-слушатель
     SOCKET listener;    
-    //                
+    //    
     uint32_t block_size;
-    //
-    std::function <void()> data_handler;
+    //обработчик данных при получении
+    data_handler_t data_handler;
+    //обаботчи при соединении
     std::function <void()> conn_handler;
-
-
 
 };
 
-void aa();
+
 
 

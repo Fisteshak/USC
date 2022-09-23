@@ -1,14 +1,18 @@
 #include "UServer.h"
 #include <memory>
 #include <thread>
+
+void data_cb(UServer::data_buffer_t& data)
+{
+    
+}
+
+
 int main()
 {
-
-    //std::unique_ptr <UServer> server(new UServer(8159, "127.0.0.1", 50));
+    
     UServer server(8159, "127.0.0.1", 50);
+    server.set_data_handler(data_cb);
     server.run();
-    server.stop();
-    
-    
-
+    // //server.stop();        
 }

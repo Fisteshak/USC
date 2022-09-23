@@ -21,6 +21,7 @@ UServer::UServer(int listenerPort, std::string listenerIP, uint32_t max_connecti
 
 UServer::~UServer()
 {
+    cleanupWinsock();
 }
 //Инициализирует сетевой интерфейс для сокетов.
 //Возвращает true в случае успеха, false в случае неудачи.
@@ -152,7 +153,7 @@ void UServer::handlingLoop()
                 }
                 fds.push_back({new_conn, POLLIN, 0});     //добавить в массив
             }         
-
+            handled_events++;
             fds[0].revents = 0;
         }
 
@@ -160,21 +161,15 @@ void UServer::handlingLoop()
 
 		//перебрать все сокеты до тех пор пока не обработаем все полученные события
         for (int i = 1; handled_events < events_num; i++) {
-            std::vector <char> data_buf(block_size);		//буфер для данных
+            data_buffer_t data_buf(block_size);		//буфер для данных
             if (fds[i].revents == POLLIN)       //если есть входящие данные
             {
                 int recieved_data;		//количество прочитанных байт
-				recieved_data = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать
-
-				
-
-				
-
+				recieved_data = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать                
+                data_handler(data_buf);  //вызвать обработчик функции
+                handled_events++;
             }
-
-        }
-	
-	
+        }	
 	}
 	return;
 }
@@ -204,3 +199,9 @@ UServer::status UServer::run()
 
 	return _status;
 }
+
+void UServer::set_data_handler(UServer::data_handler_t handler)
+{
+    data_handler = handler;
+}
+
