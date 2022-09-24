@@ -18,11 +18,14 @@ public:
 private:
     //тип обработчика данных
     typedef std::function <void(data_buffer_t&)> data_handler_t;
+    //тип обработчика принятия соединения
+    typedef std::function <void()> conn_handler_t;
 
 public:
     enum status : uint8_t {
         up = 0,
         stopped = 1,
+        connected = 7,
         error_listener_create = 2,
         error_accept_connection = 3,
         error_winsock_init = 5,
@@ -55,8 +58,14 @@ public:
     uint32_t get_block_size();
     void set_block_size(uint32_t size);
     
-    //
+    //установить обработчик получения данных
     void set_data_handler(data_handler_t handler);
+
+    //установить обработчик принятия соединения
+    void set_conn_handler(conn_handler_t handler);
+
+    //установить обработчик отключения соединения
+    void set_disconn_handler(conn_handler_t handler);
 
 private:            
 
@@ -75,13 +84,26 @@ private:
     SOCKET listener;    
     //    
     uint32_t block_size;
-    //обработчик данных при получении
+    //обработчик получений данных
     data_handler_t data_handler;
-    //обаботчи при соединении
-    std::function <void()> conn_handler;
+    //обработчик принятия нового соединения
+    conn_handler_t conn_handler;
+    //обработчик отключения соединения
+    conn_handler_t disconn_handler;
 
+    class client;
 };
 
+class UServer::client
+{
+
+public:
+    enum status : uint8_t {
+        connected = 1,
+        disconnected = 2
+    };
 
 
 
+
+};

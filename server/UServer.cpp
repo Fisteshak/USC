@@ -9,7 +9,6 @@
 
 UServer::UServer(int listenerPort, std::string listenerIP, uint32_t max_connections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
-	
     if (max_connections == 0) {
         throw std::runtime_error("max_connections value should not be zero");
     }
@@ -106,7 +105,7 @@ void UServer::stop()
 {
 	_status = status::stopped;
 
-	//closesocket(listener);
+	closesocket(listener);
 
 	joinThreads();
 
@@ -143,18 +142,19 @@ void UServer::handlingLoop()
         int handled_events = 0;
 
         //если на слушателе есть событие, то это входящее соединение        
-        if (fds[0].revents == POLLIN) {    
+        if (fds[0].revents == POLLRDNORM) {    
             
             while (true) {
                 SOCKET new_conn = accept(listener, NULL, NULL);  //принять соединение
                 if (new_conn == INVALID_SOCKET) {   //если accept возвратил INVALID_SOCKET, то все соединения приняты
-                    if (WSAGetLastError() != EWOULDBLOCK) { _status = status::error_accept_connection; }                                        
+                    int err = WSAGetLastError();
+                    if (WSAGetLastError() != WSAEWOULDBLOCK) { _status = status::error_accept_connection; }                                        
                     break;
                 }
                 fds.push_back({new_conn, POLLIN, 0});     //добавить в массив
             }         
             handled_events++;
-            fds[0].revents = 0;
+            //fds[0].revents = 0;
         }
 
         if (_status != status::up) break;
@@ -162,12 +162,27 @@ void UServer::handlingLoop()
 		//перебрать все сокеты до тех пор пока не обработаем все полученные события
         for (int i = 1; handled_events < events_num; i++) {
             data_buffer_t data_buf(block_size);		//буфер для данных
-            if (fds[i].revents == POLLIN)       //если есть входящие данные
+            //if (fds[i].revents | POLLIN)       //если есть входящие данные
+            if (fds[i].revents != 0)       //если есть входящие данные            
+            
             {
                 int recieved_data;		//количество прочитанных байт
 				recieved_data = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать                
-                data_handler(data_buf);  //вызвать обработчик функции
+
+                if (recieved_data > 0) {    //если мы успешно прочитали данные
+                    data_handler(data_buf);  //вызвать обработчик
+                    
+                }
+
+                if (recieved_data == SOCKET_ERROR) {  //если recv вернул ошибку
+                    if (WSAGetLastError() == WSAECONNRESET) {   //если сокет был "жестко" закрыт
+                        disconn_handler();
+                        closesocket(fds[i].fd);
+                        fds.erase(fds.begin()+i);      //удалить из массива соединений
+                    }
+                }
                 handled_events++;
+                
             }
         }	
 	}
@@ -200,8 +215,19 @@ UServer::status UServer::run()
 	return _status;
 }
 
-void UServer::set_data_handler(UServer::data_handler_t handler)
+void UServer::set_data_handler(data_handler_t handler)
 {
     data_handler = handler;
 }
+
+void UServer::set_conn_handler(conn_handler_t handler)
+{
+    conn_handler = handler;
+}
+
+void UServer::set_disconn_handler(conn_handler_t handler)
+{
+    disconn_handler = handler;
+}
+
 
