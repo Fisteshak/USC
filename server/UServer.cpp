@@ -16,11 +16,14 @@ UServer::UServer(int listenerPort, std::string listenerIP, uint32_t max_connecti
         throw std::runtime_error("max_connections value is too big");
     }
     this->max_connections = max_connections;
+    return;
 }
 
 UServer::~UServer()
 {
     cleanupWinsock();
+    return;
+
 }
 //Инициализирует сетевой интерфейс для сокетов.
 //Возвращает true в случае успеха, false в случае неудачи.
@@ -39,6 +42,8 @@ bool UServer::initWinsock()
 void UServer::cleanupWinsock()   
 {
     WSACleanup();
+    return;
+
 }
 
 // создает сокет-слушатель    
@@ -103,17 +108,25 @@ SOCKET UServer::createListener()
 }
 void UServer::stop()
 {
-	_status = status::stopped;
+    if (_status != status::stopped) {
 
-	closesocket(listener);
+        _status = status::stopped;
 
-	joinThreads();
+        closesocket(listener);
+        for (int i = 1; i < fds.size(); i++) {
+            closesocket(fds[i].fd);
+        }
+        fds.clear();
 
-}       
+        joinThreads();
+    }
+    return;
+}
 
 void UServer::joinThreads()
 {
 	handlingLoopThread.join();
+    return;
 }
 
 uint32_t UServer::get_block_size()
@@ -124,13 +137,14 @@ uint32_t UServer::get_block_size()
 void UServer::set_block_size(uint32_t size)
 {
 	block_size = size;
+    return;
 }
 
 
 
 void UServer::handlingLoop()
 {	
-	while (_status == status::up) {
+	while (_status == status::up) {	
         uint32_t events_num;    //количество полученных событий от сокетов
 		events_num = WSAPoll(fds.data(), fds.size(), -1);   //ждать входящих событий		
 
@@ -149,7 +163,10 @@ void UServer::handlingLoop()
                 if (new_conn == INVALID_SOCKET) {   //если accept возвратил INVALID_SOCKET, то все соединения приняты
                     int err = WSAGetLastError();
                     if (WSAGetLastError() != WSAEWOULDBLOCK) { _status = status::error_accept_connection; }                                        
-                    break;
+                    break;                    
+                }
+                if (conn_handler) {
+                        conn_handler();
                 }
                 fds.push_back({new_conn, POLLIN, 0});     //добавить в массив
             }         
@@ -160,27 +177,44 @@ void UServer::handlingLoop()
         if (_status != status::up) break;
 
 		//перебрать все сокеты до тех пор пока не обработаем все полученные события
+        data_buffer_t data_buf(block_size);		//буфер для данных
         for (int i = 1; handled_events < events_num; i++) {
-            data_buffer_t data_buf(block_size);		//буфер для данных
+            
             //if (fds[i].revents | POLLIN)       //если есть входящие данные
             if (fds[i].revents != 0)       //если есть входящие данные            
             
             {
                 int recieved_data;		//количество прочитанных байт
 				recieved_data = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать                
-
-                if (recieved_data > 0) {    //если мы успешно прочитали данные
-                    data_handler(data_buf);  //вызвать обработчик
-                    
+               
+                //если мы успешно прочитали данные
+                if (recieved_data > 0) {    
+                    if (data_handler) {
+                        data_handler(data_buf);  //вызвать обработчик
+                    }                    
                 }
-
-                if (recieved_data == SOCKET_ERROR) {  //если recv вернул ошибку
-                    if (WSAGetLastError() == WSAECONNRESET) {   //если сокет был "жестко" закрыт
+                
+                //при нормальном закрытии соединения
+                if (recieved_data == 0) {                    
+                    if (disconn_handler) {
                         disconn_handler();
-                        closesocket(fds[i].fd);
-                        fds.erase(fds.begin()+i);      //удалить из массива соединений
                     }
+                    closesocket(fds[i].fd);
+                    fds.erase(fds.begin()+i);      //удалить из массива соединений                    
                 }
+
+                //если recv вернул ошибку
+                if (recieved_data == SOCKET_ERROR) {  
+                    //при "жестком" закрытии соединения
+                    if (WSAGetLastError() == WSAECONNRESET) {
+                        if (disconn_handler) {
+                            disconn_handler();
+                        }    
+                    }
+                    closesocket(fds[i].fd);
+                    fds.erase(fds.begin()+i);      //удалить из массива соединений  
+                }
+
                 handled_events++;
                 
             }
@@ -193,9 +227,13 @@ void UServer::handlingLoop()
 //запускает сервер (цикл приема данных)
 UServer::status UServer::run()
 {
+    if (_status == status::up) {
+        stop();
+    }
+        
 	_status = status::up;	
-
-	//инициализоровать Winsock
+    
+	//инициализировать Winsock
 	if (!initWinsock()) {
 		return _status = status::error_winsock_init;
 	}
@@ -211,6 +249,7 @@ UServer::status UServer::run()
 	}	
 	//запустить поток обработки входящих сообщений
 	handlingLoopThread = std::thread(&handlingLoop, this);
+    //handlingLoop();
 
 	return _status;
 }
@@ -218,16 +257,21 @@ UServer::status UServer::run()
 void UServer::set_data_handler(data_handler_t handler)
 {
     data_handler = handler;
+    return;
 }
 
 void UServer::set_conn_handler(conn_handler_t handler)
 {
     conn_handler = handler;
+    return;
+
 }
 
 void UServer::set_disconn_handler(conn_handler_t handler)
 {
     disconn_handler = handler;
+    return;
+
 }
 
 

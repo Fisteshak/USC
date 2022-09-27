@@ -16,14 +16,20 @@ void disconn_handler()
     std::cout << "Client has disconnected" << std::endl;
 }
 
+void conn_handler()
+{
+    std::cout << "Client has connected" << std::endl;
+}
+
 int main()
 {
-    
     UServer server(9554, "127.0.0.1", 50);
     server.set_data_handler(data_handler);
     server.set_disconn_handler(disconn_handler);
+    server.set_conn_handler(conn_handler);
     server.run();
-    int x;
+    char x, y;
     std::cin >> x;
-    server.stop();        
+    server.stop();    
+    std::cout << "Server has stopped working" << std::endl;   
 }

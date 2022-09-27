@@ -83,7 +83,7 @@ private:
     //сокет-слушатель
     SOCKET listener;    
     //    
-    uint32_t block_size;
+    uint32_t block_size = 1024;
     //обработчик получений данных
     data_handler_t data_handler;
     //обработчик принятия нового соединения
