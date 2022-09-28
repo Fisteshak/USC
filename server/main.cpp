@@ -28,8 +28,10 @@ int main()
     server.set_disconn_handler(disconn_handler);
     server.set_conn_handler(conn_handler);
     server.run();
-    char x, y;
-    std::cin >> x;
-    server.stop();    
-    std::cout << "Server has stopped working" << std::endl;   
+    std::string x;
+    do {        
+        std::cin >> x;        
+    } while (x != ":stop");
+    server.stop();
+    std::cout << "Server has stopped working" << std::endl;
 }

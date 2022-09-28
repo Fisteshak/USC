@@ -154,10 +154,9 @@ void UServer::handlingLoop()
         }
         
         int handled_events = 0;
-
+            
         //если на слушателе есть событие, то это входящее соединение        
         if (fds[0].revents == POLLRDNORM) {    
-            
             while (true) {
                 SOCKET new_conn = accept(listener, NULL, NULL);  //принять соединение
                 if (new_conn == INVALID_SOCKET) {   //если accept возвратил INVALID_SOCKET, то все соединения приняты

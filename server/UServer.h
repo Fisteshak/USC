@@ -96,14 +96,18 @@ private:
 
 class UServer::client
 {
+private:
+    //дескриптор сокета
+    SOCKET& fd;
+
 
 public:
     enum status : uint8_t {
         connected = 1,
         disconnected = 2
     };
-
-
-
-
+    
+    void send();
+    void send_to();
+    void disconnect();
 };
