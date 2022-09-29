@@ -167,7 +167,14 @@ void UServer::handlingLoop()
                 if (conn_handler) {
                         conn_handler();
                 }
-                fds.push_back({new_conn, POLLIN, 0});     //добавить в массив
+                fds.push_back({new_conn, POLLIN, 0});     //добавить в массив fds
+
+                client cl;                                //добавить в массив клиентов  
+                cl.fd = new_conn;                       
+                cl._status = client::connected;
+                clients.push_back(cl);
+
+                
             }         
             handled_events++;
             //fds[0].revents = 0;
@@ -200,6 +207,8 @@ void UServer::handlingLoop()
                     }
                     closesocket(fds[i].fd);
                     fds.erase(fds.begin()+i);      //удалить из массива соединений                    
+                    clients.erase(clients.begin()+i);      //удалить из массива соединений                    
+
                 }
 
                 //если recv вернул ошибку
@@ -212,6 +221,8 @@ void UServer::handlingLoop()
                     }
                     closesocket(fds[i].fd);
                     fds.erase(fds.begin()+i);      //удалить из массива соединений  
+                    clients.erase(clients.begin()+i);      //удалить из массива соединений                    
+
                 }
 
                 handled_events++;
@@ -240,6 +251,10 @@ UServer::status UServer::run()
     SOCKET listener = createListener();  //создать сокет-слушатель
 
     fds.push_back({listener, POLLIN, 0});  //поместить слушателя в начало массива дескрипторов сокетов    
+    client cl;
+    cl.fd = listener;
+    clients.push_back(cl);
+
     this->listener = listener;
 
 	if (listener == INVALID_SOCKET) {

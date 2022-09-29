@@ -13,15 +13,19 @@ class UServer
 {
 public:
     //тип буфера для данных
-    typedef std::vector <char> data_buffer_t;    
+    //typedef std::vector <char> data_buffer_t;    
+    using data_buffer_t = std::vector <char>;        
 
 private:
     //тип обработчика данных
-    typedef std::function <void(data_buffer_t&)> data_handler_t;
+    using data_handler_t = std::function <void(data_buffer_t&)>;
     //тип обработчика принятия соединения
-    typedef std::function <void()> conn_handler_t;
+    using conn_handler_t = std::function <void()>;
 
-public:
+    class client;
+
+public:    
+
     enum status : uint8_t {
         up = 0,
         stopped = 1,
@@ -67,6 +71,7 @@ public:
     //установить обработчик отключения соединения
     void set_disconn_handler(conn_handler_t handler);
 
+    
 private:            
 
     int max_connections;
@@ -79,10 +84,14 @@ private:
     //потое обработки данных
     std::thread handlingLoopThread;     
     //массив дескрипторов сокетов
-	std::vector <struct pollfd> fds;    
+    //каждый элемент соответствует элементу clients с тем же индексом
+	std::vector <struct pollfd> fds;   
+    //массив клиентов
+    //каждый элемент соответствует элементу fds с тем же индексом
+    std::vector <client> clients;
     //сокет-слушатель
     SOCKET listener;    
-    //    
+    //размер блока при получении данных
     uint32_t block_size = 1024;
     //обработчик получений данных
     data_handler_t data_handler;
@@ -91,23 +100,24 @@ private:
     //обработчик отключения соединения
     conn_handler_t disconn_handler;
 
-    class client;
 };
 
 class UServer::client
 {
+    friend class UServer;
 private:
     //дескриптор сокета
-    SOCKET& fd;
-
+    SOCKET fd;
 
 public:
     enum status : uint8_t {
         connected = 1,
         disconnected = 2
     };
-    
-    void send();
-    void send_to();
+    status _status = status::disconnected;
+
+    client();
+    ~client();    
+    void sendData(data_buffer_t& data);
     void disconnect();
 };
