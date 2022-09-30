@@ -3,27 +3,30 @@
 #include <thread>
 #include <iostream>
 
-void data_handler(UServer::data_buffer_t& data)
-{
-    for (int i = 0; i < 20; i++) 
-        std::cout << data[i];
-    std::cout << std::endl;
+UServer server(9554, "127.0.0.1", 50);
+
+void data_handler(UServer::data_buffer_t& data, UServer::client& cl)
+{    
+    std::cout << cl.fd << ": " << data.data() << std::endl;
+    server.sendData(data);    
     return;
 }
 
-void disconn_handler()
+void disconn_handler(UServer::client& cl)
 {
-    std::cout << "Client has disconnected" << std::endl;
+    std::cout << "Client " << cl.fd << " has disconnected" << std::endl;
+    return;
 }
 
-void conn_handler()
+void conn_handler(UServer::client& cl)
 {
-    std::cout << "Client has connected" << std::endl;
+    std::cout << "Client " << cl.fd << " has connected" << std::endl;
+    return;
 }
 
 int main()
 {
-    UServer server(9554, "127.0.0.1", 50);
+    
     server.set_data_handler(data_handler);
     server.set_disconn_handler(disconn_handler);
     server.set_conn_handler(conn_handler);
@@ -34,4 +37,7 @@ int main()
     } while (x != ":stop");
     server.stop();
     std::cout << "Server has stopped working" << std::endl;
+    return 0;
 }
+
+

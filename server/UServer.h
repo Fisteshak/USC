@@ -15,14 +15,14 @@ public:
     //тип буфера для данных
     //typedef std::vector <char> data_buffer_t;    
     using data_buffer_t = std::vector <char>;        
+    class client;
 
 private:
+    
     //тип обработчика данных
-    using data_handler_t = std::function <void(data_buffer_t&)>;
+    using data_handler_t = std::function <void(data_buffer_t&, client&)>;
     //тип обработчика принятия соединения
-    using conn_handler_t = std::function <void()>;
-
-    class client;
+    using conn_handler_t = std::function <void(client&)>;    
 
 public:    
 
@@ -59,17 +59,21 @@ public:
     void stop(); 
     //завершить все потоки
     void joinThreads();    
+    //
     uint32_t get_block_size();
+    //
     void set_block_size(uint32_t size);
-    
     //установить обработчик получения данных
     void set_data_handler(data_handler_t handler);
-
     //установить обработчик принятия соединения
     void set_conn_handler(conn_handler_t handler);
-
     //установить обработчик отключения соединения
     void set_disconn_handler(conn_handler_t handler);
+    //отправить данные всем клиентам
+    void sendData(data_buffer_t& data);
+    //отправить данные выбранному клиенту
+    void sendDataTo(data_buffer_t& data, client& cl);
+
 
     
 private:            
@@ -104,20 +108,20 @@ private:
 
 class UServer::client
 {
-    friend class UServer;
+friend class UServer;
 private:
     //дескриптор сокета
-    SOCKET fd;
 
 public:
+    SOCKET fd;
     enum status : uint8_t {
         connected = 1,
         disconnected = 2
     };
     status _status = status::disconnected;
 
-    client();
-    ~client();    
-    void sendData(data_buffer_t& data);
-    void disconnect();
+    // client();
+    // ~client();    
+    // void sendData(data_buffer_t& data);
+    // void disconnect();
 };

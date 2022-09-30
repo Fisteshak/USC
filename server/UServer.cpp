@@ -164,9 +164,6 @@ void UServer::handlingLoop()
                     if (WSAGetLastError() != WSAEWOULDBLOCK) { _status = status::error_accept_connection; }                                        
                     break;                    
                 }
-                if (conn_handler) {
-                        conn_handler();
-                }
                 fds.push_back({new_conn, POLLIN, 0});     //добавить в массив fds
 
                 client cl;                                //добавить в массив клиентов  
@@ -174,6 +171,9 @@ void UServer::handlingLoop()
                 cl._status = client::connected;
                 clients.push_back(cl);
 
+                if (conn_handler) {
+                    conn_handler(clients[clients.size()-1]);
+                }
                 
             }         
             handled_events++;
@@ -196,14 +196,14 @@ void UServer::handlingLoop()
                 //если мы успешно прочитали данные
                 if (recieved_data > 0) {    
                     if (data_handler) {
-                        data_handler(data_buf);  //вызвать обработчик
+                        data_handler(data_buf, clients[i]);  //вызвать обработчик
                     }                    
                 }
                 
                 //при нормальном закрытии соединения
                 if (recieved_data == 0) {                    
                     if (disconn_handler) {
-                        disconn_handler();
+                        disconn_handler(clients[i]);
                     }
                     closesocket(fds[i].fd);
                     fds.erase(fds.begin()+i);      //удалить из массива соединений                    
@@ -216,7 +216,7 @@ void UServer::handlingLoop()
                     //при "жестком" закрытии соединения
                     if (WSAGetLastError() == WSAECONNRESET) {
                         if (disconn_handler) {
-                            disconn_handler();
+                            disconn_handler(clients[i]);
                         }    
                     }
                     closesocket(fds[i].fd);
@@ -266,6 +266,20 @@ UServer::status UServer::run()
     //handlingLoop();
 
 	return _status;
+}
+
+
+void UServer::sendData(data_buffer_t& data)
+{
+
+    for (int i = 1; i < clients.size(); i++) {
+        int data_len = send(fds[i].fd, data.data(), data.size(), 0);
+        if (data_len < 0) { //если есть ошибка, то закрываем соединение
+            std::cout << "Ошибка при отправке данных " << WSAGetLastError() << std::endl;
+            // close_conn = true;					//закрываем соединение
+        }
+    }
+    return;
 }
 
 void UServer::set_data_handler(data_handler_t handler)
