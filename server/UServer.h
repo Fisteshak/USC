@@ -73,8 +73,6 @@ public:
     void sendData(data_buffer_t& data);
     //отправить данные выбранному клиенту
     void sendDataTo(data_buffer_t& data, client& cl);
-
-
     
 private:            
 
@@ -114,6 +112,7 @@ private:
 
 public:
     SOCKET fd;
+
     enum status : uint8_t {
         connected = 1,
         disconnected = 2
@@ -121,7 +120,7 @@ public:
     status _status = status::disconnected;
 
     // client();
-    // ~client();    
+    // ~client();
     // void sendData(data_buffer_t& data);
     // void disconnect();
 };

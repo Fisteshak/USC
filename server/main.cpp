@@ -20,20 +20,26 @@ void disconn_handler(UServer::client& cl)
 
 void conn_handler(UServer::client& cl)
 {
+    
     std::cout << "Client " << cl.fd << " has connected" << std::endl;
     return;
 }
 
 int main()
 {
-    
     server.set_data_handler(data_handler);
     server.set_disconn_handler(disconn_handler);
     server.set_conn_handler(conn_handler);
     server.run();
     std::string x;
-    do {        
-        std::cin >> x;        
+    do {
+        std::cin >> x;
+        UServer::data_buffer_t buf;
+        
+        for (auto c : x) {
+            buf.push_back(c);
+        }
+        server.sendData(buf);
     } while (x != ":stop");
     server.stop();
     std::cout << "Server has stopped working" << std::endl;
