@@ -21,9 +21,11 @@ UServer::UServer(int listenerPort, std::string listenerIP, uint32_t max_connecti
 
 UServer::~UServer()
 {
+    if (_status == status::up) {
+        stop();
+    }
     cleanupWinsock();
     return;
-
 }
 //Инициализирует сетевой интерфейс для сокетов.
 //Возвращает true в случае успеха, false в случае неудачи.
@@ -140,7 +142,15 @@ void UServer::set_block_size(uint32_t size)
     return;
 }
 
+UServer::status UServer::getStatus()
+{
+    return _status;
+}
 
+uint32_t UServer::getPort()
+{
+    return listenerPort;
+}
 
 void UServer::handlingLoop()
 {	
@@ -299,7 +309,17 @@ void UServer::set_disconn_handler(conn_handler_t handler)
 {
     disconn_handler = handler;
     return;
-
 }
+
+UServer::client::status UServer::client::getStatus()
+{
+    return _status;
+}
+SOCKET UServer::client::getSocket()
+{
+    return fd;
+}
+
+
 
 

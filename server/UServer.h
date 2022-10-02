@@ -11,6 +11,7 @@
 
 class UServer
 {
+
 public:
     //тип буфера для данных
     //typedef std::vector <char> data_buffer_t;    
@@ -44,24 +45,12 @@ public:
     UServer(int listenerPort, std::string listenerIP, uint32_t max_connections = 100);
     //деструктор
     ~UServer();
-    //Инициализирует сетевой интерфейс для сокетов.
-    //Возвращает true в случае успеха, false в случае неудачи.
-    bool initWinsock();
-    // создает сокет-слушатель    
-    SOCKET createListener();
-    //закрывает интерфейсы winsock
-    void cleanupWinsock();
-    //цикл приема данных
-    void handlingLoop();
-    //запускает сервер (цикл приема данных) 
     status run();
     //останавливает сервер
     void stop(); 
-    //завершить все потоки
-    void joinThreads();    
-    //
+    //получить размер посылки
     uint32_t get_block_size();
-    //
+    //установить размер посылка
     void set_block_size(uint32_t size);
     //установить обработчик получения данных
     void set_data_handler(data_handler_t handler);
@@ -73,9 +62,25 @@ public:
     void sendData(data_buffer_t& data);
     //отправить данные выбранному клиенту
     void sendDataTo(data_buffer_t& data, client& cl);
+    //получить статус
+    status getStatus();
+    //получить порт
+    uint32_t getPort();
     
 private:            
 
+    //завершить все потоки
+    void joinThreads();    
+    //Инициализирует сетевой интерфейс для сокетов.
+    //Возвращает true в случае успеха, false в случае неудачи.
+    bool initWinsock();
+    // создает сокет-слушатель    
+    SOCKET createListener();
+    //закрывает интерфейсы winsock
+    void cleanupWinsock();
+    //цикл приема данных
+    void handlingLoop();
+    //запускает сервер (цикл приема данных) 
     int max_connections;
     //Port слушателя (сервера)
     int listenerPort;                  
@@ -107,20 +112,21 @@ private:
 class UServer::client
 {
 friend class UServer;
-private:
-    //дескриптор сокета
-
 public:
-    SOCKET fd;
-
     enum status : uint8_t {
         connected = 1,
         disconnected = 2
     };
-    status _status = status::disconnected;
 
+    status getStatus();
+    SOCKET getSocket();
     // client();
     // ~client();
     // void sendData(data_buffer_t& data);
     // void disconnect();
+private:
+    //дескриптор сокета
+    SOCKET fd;
+    //статус
+    client::status _status = client::status::disconnected;  
 };

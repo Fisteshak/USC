@@ -7,21 +7,21 @@ UServer server(9554, "127.0.0.1", 50);
 
 void data_handler(UServer::data_buffer_t& data, UServer::client& cl)
 {    
-    std::cout << cl.fd << ": " << data.data() << std::endl;
+    std::cout << cl.getSocket() << ": " << data.data() << std::endl;
     server.sendData(data);    
     return;
 }
 
 void disconn_handler(UServer::client& cl)
 {
-    std::cout << "Client " << cl.fd << " has disconnected" << std::endl;
+    std::cout << "Client " << cl.getSocket() << " has disconnected" << std::endl;
     return;
 }
 
 void conn_handler(UServer::client& cl)
 {
     
-    std::cout << "Client " << cl.fd << " has connected" << std::endl;
+    std::cout << "Client " << cl.getSocket() << " has connected" << std::endl;
     return;
 }
 
