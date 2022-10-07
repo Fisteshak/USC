@@ -1,3 +1,6 @@
+//БАГ: ломаются ссылки при добавлении в массив соединений нового элемента (client.push_back)
+//из за реаллокации вектора
+
 #pragma once
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -120,6 +123,7 @@ public:
 
     status getStatus();
     SOCKET getSocket();
+    void* ref;
     // client();
     // ~client();
     // void sendData(data_buffer_t& data);
@@ -127,6 +131,7 @@ public:
 private:
     //дескриптор сокета
     SOCKET fd;
+    //ссылка на пользовательский обьект
     //статус
     client::status _status = client::status::disconnected;  
 };

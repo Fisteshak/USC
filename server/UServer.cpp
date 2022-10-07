@@ -176,10 +176,11 @@ void UServer::handlingLoop()
                 }
                 fds.push_back({new_conn, POLLIN, 0});     //добавить в массив fds
 
-                client cl;                                //добавить в массив клиентов  
-                cl.fd = new_conn;                       
-                cl._status = client::connected;
-                clients.push_back(cl);
+                
+                clients.push_back({});
+                clients.back().fd = new_conn;                       
+                clients.back()._status = client::connected;
+                
 
                 if (conn_handler) {
                     conn_handler(clients[clients.size()-1]);
