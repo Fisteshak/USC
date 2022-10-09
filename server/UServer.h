@@ -13,25 +13,24 @@
 #include <thread>
 #include <vector>
 #include <functional>
-#include <list>
 
 class UServer
 {
 
 public:
-    //тип буфера для данных
-    //typedef std::vector <char> data_buffer_t;
-    using data_buffer_t = std::vector <char>;
+    //тип буфера для данных    
+    using DataBuffer = std::vector <char>;  
+    using DataBufferStr = std::string;
     class client;
 
 private:
-
+    
     //тип обработчика данных
-    using data_handler_t = std::function <void(data_buffer_t&, client&)>;
+    using data_handler_t = std::function <void(DataBuffer&, client&)>;
     //тип обработчика принятия соединения
-    using conn_handler_t = std::function <void(client&)>;
+    using conn_handler_t = std::function <void(client&)>;    
 
-public:
+public:    
 
 
 
@@ -55,7 +54,7 @@ public:
     ~UServer();
     status run();
     //останавливает сервер
-    void stop();
+    void stop(); 
     //получить размер посылки
     uint32_t get_block_size();
     //установить размер посылка
@@ -67,42 +66,43 @@ public:
     //установить обработчик отключения соединения
     void set_disconn_handler(conn_handler_t handler);
     //отправить данные всем клиентам
-    void sendData(data_buffer_t& data);
+    void sendData(DataBuffer& data);
+    void sendData(DataBufferStr& data);
     //отправить данные выбранному клиенту
-    void sendDataTo(data_buffer_t& data, client& cl);
+    void sendDataTo(DataBuffer& data, client& cl);
     //получить статус
     status getStatus();
     //получить порт
     uint32_t getPort();
-
-private:
+    
+private:            
 
     //завершить все потоки
-    void joinThreads();
+    void joinThreads();    
     //Инициализирует сетевой интерфейс для сокетов.
     //Возвращает true в случае успеха, false в случае неудачи.
     bool initWinsock();
-    // создает сокет-слушатель
+    // создает сокет-слушатель    
     SOCKET createListener();
     //закрывает интерфейсы winsock
     void cleanupWinsock();
     //цикл приема данных
     void handlingLoop();
-    //запускает сервер (цикл приема данных)
+    //запускает сервер (цикл приема данных) 
     uint32_t nMaxConnections;
     //количество текущих подключенных соединений
     uint32_t nConnections = 0;
     //Port слушателя (сервера)
-    int listenerPort;
-    //IP слушателя (сервера)
-    std::string listenerIP;
+    int listenerPort;                  
+    //IP слушателя (сервера) 
+    std::string listenerIP;            
     //статус сервера
     std::atomic <status> _status = status::stopped;
     //потое обработки данных
-    std::thread handlingLoopThread;
+    std::thread handlingLoopThread;     
     //массив дескрипторов сокетов
     //каждый элемент соответствует элементу clients с тем же индексом
-	std::vector <struct pollfd> fds;
+	std::vector <struct pollfd> fds;   
     //массив клиентов
     //каждый элемент соответствует элементу fds с тем же индексом
     std::vector <client> clients;
@@ -122,10 +122,19 @@ private:
 class UServer::client
 {
 friend class UServer;
+
 public:
+    bool operator==(const UServer::client &clientb) {
+         return (fd == clientb.fd);
+    }
+    bool operator!=(const UServer::client &clientb) {
+         return (fd != clientb.fd);
+    }
+
     enum status : uint8_t {
         connected = 1,
-        disconnected = 2
+        disconnected = 2,
+        error_send_data = 3
     };
 
     status getStatus();
@@ -133,12 +142,15 @@ public:
     void* ref;
     // client();
     // ~client();
-    // void sendData(data_buffer_t& data);
-    // void disconnect();
+    UServer::client::status sendData(DataBuffer& data);
+    UServer::client::status sendData(DataBufferStr& data);
+
+    void disconnect();
 private:
     //дескриптор сокета
     SOCKET fd;
     //ссылка на пользовательский обьект
     //статус
-    client::status _status = client::status::disconnected;
+    client::status _status = client::status::disconnected;  
 };
+

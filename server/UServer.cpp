@@ -200,7 +200,7 @@ void UServer::handlingLoop()
         if (_status != status::up) break;
 
 		//перебрать все сокеты до тех пор пока не обработаем все полученные события
-        data_buffer_t data_buf(block_size);		//буфер для данных
+        DataBuffer data_buf(block_size);		//буфер для данных
         for (int i = 1; handled_events < events_num; i++) {
 
             //if (fds[i].revents | POLLIN)       //если есть входящие данные
@@ -296,7 +296,20 @@ UServer::status UServer::run()
 }
 
 
-void UServer::sendData(data_buffer_t& data)
+void UServer::sendData(DataBuffer& data)
+{
+
+    for (int i = 1; i < nConnections; i++) {
+        int data_len = send(fds[i].fd, data.data(), data.size(), 0);
+        if (data_len < 0) { //если есть ошибка, то закрываем соединение
+            std::cout << "Error sending data " << WSAGetLastError() << std::endl;
+            // close_conn = true;					//закрываем соединение
+        }
+    }
+    return;
+}
+
+void UServer::sendData(DataBufferStr& data)
 {
 
     for (int i = 1; i < nConnections; i++) {
@@ -337,6 +350,22 @@ SOCKET UServer::client::getSocket()
     return fd;
 }
 
+UServer::client::status UServer::client::sendData(DataBuffer& data)
+{
+    int dataLen = send(fd, data.data(), data.size(), 0);
+    if (dataLen == SOCKET_ERROR) {
+        _status = status::error_send_data;        
+    }
+    
+    return _status;
+}
 
-
-
+UServer::client::status UServer::client::sendData(DataBufferStr& data)
+{
+    int dataLen = send(fd, data.data(), data.size(), 0);
+    if (dataLen == SOCKET_ERROR) {
+        _status = status::error_send_data;        
+    }
+    
+    return _status;
+}

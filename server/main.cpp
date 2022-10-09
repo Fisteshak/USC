@@ -11,10 +11,10 @@ struct user{
 };
 
 std::vector <user> users;
-int nUsers = 0;
+int nUsers = 0; 
 
 
-void data_handler(UServer::data_buffer_t& data, UServer::client& cl)
+void data_handler(UServer::DataBuffer& data, UServer::client& cl)
 {
     user* uref = (user*)cl.ref;
     if (uref->name == "") {
@@ -27,7 +27,9 @@ void data_handler(UServer::data_buffer_t& data, UServer::client& cl)
     }
     else {
         std::cout << uref->name << ": " << data.data() << std::endl;
-        server.sendData(data);
+        for (auto x : users) {
+            if (x.sock != cl) x.sock.sendData(data);
+        }
         return;
     }
 }
@@ -46,8 +48,9 @@ void conn_handler(UServer::client& cl)
 {
     users.push_back({"", cl});
     cl.ref = &users.back();
-    //user* uref = (user*)cl.ref;
-    //std::cout << uref->name << " connected"  << std::endl;
+    std::string s;
+    s = "succesfully connected";
+    cl.sendData(s);
     return;
 }
 
@@ -61,15 +64,15 @@ int main()
     server.run();
     users.reserve(50);
     std::string x;
-    do {
-        std::cin >> x;
-        UServer::data_buffer_t buf;
 
-        for (auto c : x) {
-            buf.push_back(c);
-        }
+    UServer::DataBufferStr buf;
+    do {
+        
+        std::cin >> buf;
+
         server.sendData(buf);
-    } while (x != ":stop");
+
+    } while (buf != ":stop");
     server.stop();
     std::cout << "Server has stopped working" << std::endl;
     return 0;
