@@ -4,14 +4,14 @@
 
 
 # Configuration directories and files
-SourceDirectory: E:/Projects/C++/USC
-BuildDirectory: E:/Projects/C++/USC/build
+SourceDirectory: C:/Lazarev/USC
+BuildDirectory: C:/Lazarev/USC/build
 
 # Where to place the cost data store
 CostDataFile: 
 
 # Site is something like machine.domain, i.e. pragmatic.crd
-Site: DESKTOP-6KNUR14
+Site: Comp10-ой
 
 # Build name is osname-revision-compiler, i.e. Linux-2.4.2-2smp-c++
 BuildName: Win32-mingw32-make
@@ -27,7 +27,7 @@ SubmitInactivityTimeout:
 NightlyStartTime: 00:00:00 EDT
 
 # Commands for the build/test/submit cycle
-ConfigureCommand: "C:/Program Files/CMake/bin/cmake.exe" "E:/Projects/C++/USC"
+ConfigureCommand: "C:/Program Files/CMake/bin/cmake.exe" "C:/Lazarev/USC"
 MakeCommand: C:/Program\ Files/CMake/bin/cmake.exe --build . --config "${CTEST_CONFIGURATION_TYPE}" -- -i
 DefaultCTestConfigurationType: Release
 
@@ -63,8 +63,8 @@ UpdateOptions:
 UpdateType: git
 
 # Compiler info
-Compiler: C:/Program Files/msys64/mingw64/bin/g++.exe
-CompilerVersion: 11.3.0
+Compiler: C:/msys64/mingw64/bin/g++.exe
+CompilerVersion: 12.2.0
 
 # Dynamic analysis (MemCheck)
 PurifyCommand: 
@@ -81,7 +81,7 @@ MemoryCheckCommandOptions:
 MemoryCheckSuppressionFile: 
 
 # Coverage
-CoverageCommand: C:/Program Files/msys64/mingw64/bin/gcov.exe
+CoverageCommand: C:/msys64/mingw64/bin/gcov.exe
 CoverageExtraFlags: -l
 
 # Testing options
