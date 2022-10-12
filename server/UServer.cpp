@@ -15,7 +15,7 @@ UServer::UServer(int listenerPort, std::string listenerIP, uint32_t nMaxConnecti
     if (nMaxConnections > SOMAXCONN) {
         throw std::runtime_error("nMaxConnections value is too big");
     }
-    this->nMaxConnections = nMaxConnections;
+    this->nMaxConnections = nMaxConnections+1;
 
     fds.resize(nMaxConnections);
     clients.resize(nMaxConnections);
@@ -225,6 +225,7 @@ void UServer::handlingLoop()
                     closesocket(fds[i].fd);
                     fds.erase(fds.begin()+i);      //удалить из массива соединений
                     clients.erase(clients.begin()+i);      //удалить из массива соединений
+                    
                     fds.push_back({});
                     clients.push_back({});
 
@@ -368,4 +369,9 @@ UServer::client::status UServer::client::sendData(DataBufferStr& data)
     }
     
     return _status;
+}
+
+UServer::client::~client()
+{
+    closesocket(this->fd);
 }

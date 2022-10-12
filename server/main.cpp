@@ -23,7 +23,7 @@ void data_handler(UServer::DataBuffer& data, UServer::client& cl)
             uref->name.push_back(data[i]);
             i++;
         }
-        std::cout << uref->name << ": connected\n";
+        std::cout << uref->name << " connected\n";
     }
     else {
         std::cout << uref->name << ": " << data.data() << std::endl;
@@ -77,5 +77,3 @@ int main()
     std::cout << "Server has stopped working" << std::endl;
     return 0;
 }
-
-

@@ -52,6 +52,8 @@ public:
     UServer(int listenerPort, std::string listenerIP, uint32_t nMaxConnections = 100);
     //деструктор
     ~UServer();
+    
+    //запускает сервер (цикл приема данных) 
     status run();
     //останавливает сервер
     void stop(); 
@@ -88,9 +90,9 @@ private:
     void cleanupWinsock();
     //цикл приема данных
     void handlingLoop();
-    //запускает сервер (цикл приема данных) 
+    //максимальное количество соединений (включая сокет listener)
     uint32_t nMaxConnections;
-    //количество текущих подключенных соединений
+    //количество текущих подключенных соединений (включая сокет listener)
     uint32_t nConnections = 0;
     //Port слушателя (сервера)
     int listenerPort;                  
@@ -141,7 +143,7 @@ public:
     SOCKET getSocket();
     void* ref;
     // client();
-    // ~client();
+    ~client();
     UServer::client::status sendData(DataBuffer& data);
     UServer::client::status sendData(DataBufferStr& data);
 
