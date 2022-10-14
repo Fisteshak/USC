@@ -1,7 +1,9 @@
 #include "UServer.h"
+
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include "windows.h"
+
 #include <iostream>
 #include <string>
 #include <atomic>
@@ -225,7 +227,7 @@ void UServer::handlingLoop()
                     closesocket(fds[i].fd);
                     fds.erase(fds.begin()+i);      //удалить из массива соединений
                     clients.erase(clients.begin()+i);      //удалить из массива соединений
-                    
+
                     fds.push_back({});
                     clients.push_back({});
 
@@ -355,9 +357,9 @@ UServer::client::status UServer::client::sendData(DataBuffer& data)
 {
     int dataLen = send(fd, data.data(), data.size(), 0);
     if (dataLen == SOCKET_ERROR) {
-        _status = status::error_send_data;        
+        _status = status::error_send_data;
     }
-    
+
     return _status;
 }
 
@@ -365,9 +367,9 @@ UServer::client::status UServer::client::sendData(DataBufferStr& data)
 {
     int dataLen = send(fd, data.data(), data.size(), 0);
     if (dataLen == SOCKET_ERROR) {
-        _status = status::error_send_data;        
+        _status = status::error_send_data;
     }
-    
+
     return _status;
 }
 

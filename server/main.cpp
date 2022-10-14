@@ -1,4 +1,5 @@
 #include "UServer.h"
+
 #include <memory>
 #include <thread>
 #include <iostream>
@@ -11,7 +12,7 @@ struct user{
 };
 
 std::vector <user> users;
-int nUsers = 0; 
+int nUsers = 0;
 
 
 void data_handler(UServer::DataBuffer& data, UServer::client& cl)
@@ -67,7 +68,7 @@ int main()
 
     UServer::DataBufferStr buf;
     do {
-        
+
         std::cin >> buf;
 
         server.sendData(buf);
