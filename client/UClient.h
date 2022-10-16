@@ -23,8 +23,10 @@ public:
 
     void pause();
     status connectTo(std::string IP, uint32_t port);
+    void disconnect();
     void recvHandlingLoop();
     void joinThreads();
+    status getStatus();
 private:
 
     bool initWinsock();  //Инициализирует сетевой интерфейс для сокетов.
@@ -33,5 +35,6 @@ private:
     std::atomic <status> _status = status::disconnected;
     std::thread recvHandlingLoopThread;
     SOCKET clientSocket;
+
 };
 

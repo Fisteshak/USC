@@ -66,6 +66,14 @@ UClient::status UClient::connectTo(std::string IP, uint32_t port)
     return _status;
 }
 
+
+void UClient::disconnect()
+{
+    _status = status::disconnected;
+
+    joinThreads();
+}
+
 void UClient::pause()
 {
     _status == status::paused;
@@ -83,6 +91,13 @@ void UClient::recvHandlingLoop()
 
 void UClient::joinThreads()
 {
-    recvHandlingLoopThread.join();
+    if (recvHandlingLoopThread.joinable()) {
+        recvHandlingLoopThread.join();
+    }
     return;
+}
+
+UClient::status UClient::getStatus()
+{
+    return _status;
 }
