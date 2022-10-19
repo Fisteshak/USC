@@ -124,9 +124,11 @@ void UServer::stop()
         for (int i = 1; i < nConnections; i++) {
             closesocket(fds[i].fd);
         }
-        fds.clear();
 
         joinThreads();
+
+        fds.clear();
+        clients.clear();
     }
     return;
 }
@@ -135,6 +137,19 @@ void UServer::joinThreads()
 {
 	handlingLoopThread.join();
     return;
+}
+
+void UServer::cleanup()
+{
+    closesocket(listener);
+    for (int i = 1; i < nConnections; i++) {
+        closesocket(fds[i].fd);
+    }
+
+    joinThreads();
+
+    fds.clear();
+    clients.clear();
 }
 
 uint32_t UServer::get_block_size()
@@ -153,6 +168,7 @@ UServer::status UServer::getStatus()
     return _status;
 }
 
+
 uint32_t UServer::getPort()
 {
     return listenerPort;
@@ -164,6 +180,11 @@ void UServer::handlingLoop()
         uint32_t events_num;    //количество полученных событий от сокетов
 		events_num = WSAPoll(fds.data(), nConnections, -1);   //ждать входящих событий
 
+        //в случае если сервер был остановлен извне (.stop)
+        if (_status != status::up) {
+            return;
+        }
+
         if (events_num == SOCKET_ERROR) {
             _status = status::error_wsapoll;
             return;
@@ -171,32 +192,39 @@ void UServer::handlingLoop()
 
         int handled_events = 0;
 
-        //если на слушателе есть событие, то это входящее соединение
-        if (fds[0].revents == POLLRDNORM) {
-            while (true) {
-                if (nConnections == nMaxConnections) break;
+        //если на слушателе есть событие
+        if (fds[0].revents != 0) {
+            //то это входящее соединение
+            if (fds[0].revents == POLLRDNORM) {
+                while (true) {
+                    if (nConnections == nMaxConnections) break;
 
-                SOCKET new_conn = accept(listener, NULL, NULL);  //принять соединение
+                    SOCKET new_conn = accept(listener, NULL, NULL); //принять соединение
 
-                if (new_conn == INVALID_SOCKET) {   //если accept возвратил INVALID_SOCKET, то все соединения приняты
-                    int err = WSAGetLastError();
-                    if (WSAGetLastError() != WSAEWOULDBLOCK) { _status = status::error_accept_connection; }
-                    break;
+                    if (new_conn == INVALID_SOCKET) { //если accept возвратил INVALID_SOCKET, то все соединения приняты
+                        int err = WSAGetLastError();
+                        if (WSAGetLastError() != WSAEWOULDBLOCK) {
+                            _status = status::error_accept_connection;
+                        }
+                        break;
+                    }
+
+                    nConnections++;
+                    fds[nConnections - 1] = {new_conn, POLLIN, 0}; //добавить в массив fds
+
+                    clients[nConnections - 1].fd = new_conn;
+                    clients[nConnections - 1]._status = client::connected;
+
+                    if (conn_handler) {
+                        conn_handler(clients[nConnections - 1]);
+                    }
                 }
-
-                nConnections++;
-                fds[nConnections-1] = {new_conn, POLLIN, 0};     //добавить в массив fds
-
-                clients[nConnections-1].fd = new_conn;
-                clients[nConnections-1]._status = client::connected;
-
-
-                if (conn_handler) {
-                    conn_handler(clients[nConnections-1]);
-                }
-
+                handled_events++;
             }
-            handled_events++;
+            //иначе это ошибка
+            else {
+                _status = status::error_wsapoll;
+            }
         }
 
         if (_status != status::up) break;
