@@ -146,8 +146,6 @@ void UServer::cleanup()
         closesocket(fds[i].fd);
     }
 
-    joinThreads();
-
     fds.clear();
     clients.clear();
 }
@@ -187,6 +185,7 @@ void UServer::handlingLoop()
 
         if (events_num == SOCKET_ERROR) {
             _status = status::error_wsapoll;
+            cleanup();
             return;
         }
 
@@ -227,7 +226,10 @@ void UServer::handlingLoop()
             }
         }
 
-        if (_status != status::up) break;
+        if (_status != status::up) {
+            cleanup();
+            return;
+        }
 
 		//перебрать все сокеты до тех пор пока не обработаем все полученные события
         DataBuffer data_buf(block_size);		//буфер для данных

@@ -90,7 +90,7 @@ private:
     void cleanupWinsock();
     //цикл приема данных
     void handlingLoop();
-    //
+    //закрывает и уничтожает массивы соединений
     void cleanup();
     //максимальное количество соединений (включая сокет listener)
     uint32_t nMaxConnections;
