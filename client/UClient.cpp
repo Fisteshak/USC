@@ -63,8 +63,6 @@ UClient::status UClient::connectTo(std::string IP, uint32_t port)
         _status = status::error_socket_connect;
     }
 
-
-
     return _status;
 }
 
@@ -72,7 +70,7 @@ UClient::status UClient::connectTo(std::string IP, uint32_t port)
 void UClient::disconnect()
 {
     _status = status::disconnected;
-
+    closesocket(clientSocket);
     joinThreads();
 }
 
@@ -85,6 +83,14 @@ void UClient::pause()
 void UClient::recvHandlingLoop()
 {
     while (_status == status::connected) {
+        DataBuffer dataBuf(block_size);
+        int messageSize = recv(clientSocket, dataBuf.data(), dataBuf.size(), 0);
+        if (messageSize > 0) {
+            for (int i = 0; dataBuf[i] != '\0'; i++) {
+                std::cout << dataBuf[i];
+            }
+            std::cout << std::endl;
+        }
 
     }
 

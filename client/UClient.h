@@ -3,9 +3,11 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include "windows.h"
+
 #include <cstdint>
 #include <thread>
 #include <atomic>
+#include <vector>
 
 class UClient
 {
@@ -27,11 +29,14 @@ public:
     void recvHandlingLoop();
     void joinThreads();
     status getStatus();
+    using DataBuffer = std::vector <char>;
+    using DataBufferStr = std::string;
+
 private:
 
     bool initWinsock();  //Инициализирует сетевой интерфейс для сокетов.
                          //Возвращает true в случае успеха, false в случае неудачи.
-
+    uint32_t block_size = 1024;
     std::atomic <status> _status = status::disconnected;
     std::thread recvHandlingLoopThread;
     SOCKET clientSocket;
