@@ -53,9 +53,17 @@ UClient::status UClient::connectTo(std::string IP, uint32_t port)
 	clientInfo.sin_port = htons(port);
 	clientInfo.sin_addr = clientIP;
 
-    if (connect(clientSocket, (sockaddr*)&clientInfo, sizeof(clientInfo)) != SOCKET_ERROR) {
+    //подключиться к серверу
+    auto connRes = connect(clientSocket, (sockaddr*)&clientInfo, sizeof(clientInfo));
+
+    if (connRes != SOCKET_ERROR) {
         _status = status::connected;
+
         recvHandlingLoopThread = std::thread(&recvHandlingLoop, this);
+
+        if (conn_handler) {
+            conn_handler();
+        }
 
     }
     else {
@@ -85,11 +93,11 @@ void UClient::recvHandlingLoop()
     while (_status == status::connected) {
         DataBuffer dataBuf(block_size);
         int messageSize = recv(clientSocket, dataBuf.data(), dataBuf.size(), 0);
+
         if (messageSize > 0) {
-            for (int i = 0; dataBuf[i] != '\0'; i++) {
-                std::cout << dataBuf[i];
+            if (data_handler) {
+                data_handler(dataBuf);
             }
-            std::cout << std::endl;
         }
 
     }
@@ -108,4 +116,16 @@ void UClient::joinThreads()
 UClient::status UClient::getStatus()
 {
     return _status;
+}
+
+void UClient::set_data_handler(data_handler_t handler)
+{
+    data_handler = handler;
+    return;
+}
+
+void UClient::set_conn_handler(conn_handler_t handler)
+{
+    conn_handler = handler;
+    return;
 }

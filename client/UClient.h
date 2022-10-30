@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <vector>
+#include <functional>
 
 class UClient
 {
@@ -31,6 +32,21 @@ public:
     status getStatus();
     using DataBuffer = std::vector <char>;
     using DataBufferStr = std::string;
+
+    using conn_handler_t = std::function <void()>;
+    using data_handler_t = std::function <void(DataBuffer&)>;
+
+    void set_data_handler(data_handler_t handler);
+    //установить обработчик принятия соединения
+    void set_conn_handler(conn_handler_t handler);
+    //установить обработчик отключения соединения
+
+    //обработчик получений данных
+    data_handler_t data_handler;
+    //обработчик принятия нового соединения
+    conn_handler_t conn_handler;
+    //обработчик отключения соединения
+    conn_handler_t disconn_handler;
 
 private:
 

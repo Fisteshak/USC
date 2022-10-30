@@ -1,5 +1,3 @@
-//БАГ: ломаются ссылки при добавлении в массив соединений нового элемента (client.push_back)
-//из за реаллокации вектора
 
 #pragma once
 
@@ -28,6 +26,7 @@ private:
     //тип обработчика данных
     using data_handler_t = std::function <void(DataBuffer&, client&)>;
     //тип обработчика принятия соединения
+
     using conn_handler_t = std::function <void(client&)>;
 
 public:

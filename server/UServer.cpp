@@ -387,7 +387,7 @@ UServer::client::status UServer::client::sendData(DataBuffer& data)
 {
     int dataLen = send(fd, data.data(), data.size(), 0);
     if (dataLen == SOCKET_ERROR) {
-        _status = status::error_send_data;
+    _status = status::error_send_data;
     }
 
     return _status;
