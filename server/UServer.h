@@ -1,6 +1,3 @@
-//БАГ: ломаются ссылки при добавлении в массив соединений нового элемента (client.push_back)
-//из за реаллокации вектора
-
 #pragma once
 
 #include <WinSock2.h>
@@ -31,8 +28,6 @@ private:
     using conn_handler_t = std::function <void(client&)>;
 
 public:
-
-
 
     enum status : uint8_t {
         up = 0,
