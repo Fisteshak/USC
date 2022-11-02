@@ -22,7 +22,7 @@ bool UClient::initWinsock()
     WORD ver = MAKEWORD(2, 2);
     if (WSAStartup(ver, &wsaData) != 0)
     {
-        std::cout << "Error: can't initialize winsock!" << WSAGetLastError();
+        std::cout << "Error: can't initialize winsock!" << getLastError();
         return false;
     }
     return true;
@@ -58,7 +58,9 @@ UClient::status UClient::connectTo(std::string IP, uint32_t port)
 
     if (connRes != SOCKET_ERROR) {
         _status = status::connected;
-
+        if (connHandler) {
+            connHandler();
+        }
         recvHandlingLoopThread = std::thread(&recvHandlingLoop, this);
 
         if (conn_handler) {
@@ -91,17 +93,30 @@ void UClient::pause()
 void UClient::recvHandlingLoop()
 {
     while (_status == status::connected) {
-        DataBuffer dataBuf(block_size);
+        DataBuffer dataBuf(blockSize);
+        //получить данные
         int messageSize = recv(clientSocket, dataBuf.data(), dataBuf.size(), 0);
 
-        if (messageSize > 0) {
-            if (data_handler) {
-                data_handler(dataBuf);
-            }
+        if (_status != status::connected) {
+            break;
         }
 
-    }
+        if (messageSize > 0) {
+            //вызвать обработчик
+            if (dataHandler) {
+                dataHandler(dataBuf);
+            }
+        }
+        //при закрытии соединения со стороны сервера
+        if (messageSize <= 0) {
+            _status = status::disconnected;
 
+            if (disconnHandler) {
+                disconnHandler();
+            }
+            closesocket(clientSocket);
+        }
+    }
     return;
 }
 
@@ -113,19 +128,68 @@ void UClient::joinThreads()
     return;
 }
 
+UClient::status UClient::sendDataToServer(DataBuffer& data)
+{
+    if (_status == status::connected) {
+        int dataLen = send(clientSocket, data.data(), data.size(), 0);
+        if (dataLen < 0) {
+            std::cout << "Error sending data " << getLastError() << std::endl;
+            _status = status::error_send_data;
+        }
+    }
+    return _status;
+}
+
+UClient::status UClient::sendDataToServer(DataBufferStr& data)
+{
+    if (_status == status::connected) {
+        int dataLen = send(clientSocket, data.data(), data.size(), 0);
+        if (dataLen < 0) {
+            std::cout << "Error sending data " << getLastError() << std::endl;
+            _status = status::error_send_data;
+        }
+    }
+    return _status;
+}
+
 UClient::status UClient::getStatus()
 {
     return _status;
 }
 
-void UClient::set_data_handler(data_handler_t handler)
+uint32_t UClient::getBlockSize()
 {
-    data_handler = handler;
+	return blockSize;
+}
+
+void UClient::setBlockSize(uint32_t size)
+{
+	blockSize = size;
     return;
 }
 
-void UClient::set_conn_handler(conn_handler_t handler)
+void UClient::setDataHandler(DataHandler handler)
 {
-    conn_handler = handler;
+    dataHandler = handler;
     return;
 }
+
+void UClient::setConnHandler(ConnHandler handler)
+{
+    connHandler = handler;
+    return;
+
+}
+
+void UClient::setDisconnHandler(ConnHandler handler)
+{
+    disconnHandler = handler;
+    return;
+}
+
+
+int UClient::getLastError()
+{
+    return WSAGetLastError();
+}
+

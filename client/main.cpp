@@ -2,40 +2,50 @@
 #include <iostream>
 #include <string>
 
-void conn_handler()
-{
-    std::cout << "Successfully connected to server" << std::endl;
-}
-
 void data_handler(UClient::DataBuffer& data)
 {
     for (int i = 0; data[i] != '\0'; i++) {
         std::cout << data[i];
     }
     std::cout << std::endl;
-
 }
 
+void conn_handler()
+{
+    std::cout << "[client] Succesfully connected to server" << std::endl;
+}
+
+void disconn_handler()
+{
+    std::cout << "[client] Disconnected from server" << std::endl;
+}
 
 int main()
 {
     UClient client;
 
-    client.set_conn_handler(conn_handler);
-    client.set_data_handler(data_handler);
+    client.setDataHandler(data_handler);
+    client.setDisconnHandler(disconn_handler);
+    client.setConnHandler(conn_handler);
 
     client.connectTo("127.0.0.1", 9554);
+
     if (client.getStatus() != UClient::status::connected) {
         std::cout << "Failed to connect to a server\n";
         return 0;
     }
 
+    UClient::DataBufferStr data;
 
-    std::string s = "";
-    do {
-        std::cin >> s;
-    } while (s != ":stop");
+    while (true) {
+        std::cin >> data;
+
+        if (data == ":stop" || client.getStatus() != UClient::status::connected) {
+            break;
+        }
+        client.sendDataToServer(data);
+    }
+
 
     client.disconnect();
-
 }
