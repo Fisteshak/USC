@@ -22,7 +22,7 @@ bool UClient::initWinsock()
     WORD ver = MAKEWORD(2, 2);
     if (WSAStartup(ver, &wsaData) != 0)
     {
-        std::cout << "Error: can't initialize winsock!" << WSAGetLastError();
+        std::cout << "Error: can't initialize winsock!" << getLastError();
         return false;
     }
     return true;
@@ -86,9 +86,13 @@ void UClient::pause()
 void UClient::recvHandlingLoop()
 {
     while (_status == status::connected) {
-        DataBuffer dataBuf(block_size);
+        DataBuffer dataBuf(blockSize);
         //получить данные
         int messageSize = recv(clientSocket, dataBuf.data(), dataBuf.size(), 0);
+
+        if (_status != status::connected) {
+            break;
+        }
 
         if (messageSize > 0) {
             //вызвать обработчик
@@ -103,12 +107,9 @@ void UClient::recvHandlingLoop()
             if (disconnHandler) {
                 disconnHandler();
             }
-
             closesocket(clientSocket);
         }
-
     }
-
     return;
 }
 
@@ -120,9 +121,44 @@ void UClient::joinThreads()
     return;
 }
 
+UClient::status UClient::sendDataToServer(DataBuffer& data)
+{
+    if (_status == status::connected) {
+        int dataLen = send(clientSocket, data.data(), data.size(), 0);
+        if (dataLen < 0) {
+            std::cout << "Error sending data " << getLastError() << std::endl;
+            _status = status::error_send_data;
+        }
+    }
+    return _status;
+}
+
+UClient::status UClient::sendDataToServer(DataBufferStr& data)
+{
+    if (_status == status::connected) {
+        int dataLen = send(clientSocket, data.data(), data.size(), 0);
+        if (dataLen < 0) {
+            std::cout << "Error sending data " << getLastError() << std::endl;
+            _status = status::error_send_data;
+        }
+    }
+    return _status;
+}
+
 UClient::status UClient::getStatus()
 {
     return _status;
+}
+
+uint32_t UClient::getBlockSize()
+{
+	return blockSize;
+}
+
+void UClient::setBlockSize(uint32_t size)
+{
+	blockSize = size;
+    return;
 }
 
 void UClient::setDataHandler(DataHandler handler)
@@ -142,5 +178,11 @@ void UClient::setDisconnHandler(ConnHandler handler)
 {
     disconnHandler = handler;
     return;
+}
+
+
+int UClient::getLastError()
+{
+    return WSAGetLastError();
 }
 

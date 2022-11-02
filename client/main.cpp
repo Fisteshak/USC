@@ -35,10 +35,17 @@ int main()
         return 0;
     }
 
-    std::string s = "";
-    do {
-        std::cin >> s;
-    } while (s != ":stop" or client.getStatus() != UClient::status::connected);
+    UClient::DataBufferStr data;
+
+    while (true) {
+        std::cin >> data;
+
+        if (data == ":stop" || client.getStatus() != UClient::status::connected) {
+            break;
+        }
+        client.sendDataToServer(data);
+    }
+
 
     client.disconnect();
 }
