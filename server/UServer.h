@@ -10,6 +10,7 @@
 #include <thread>
 #include <vector>
 #include <functional>
+#include <any>
 
 class UServer
 {
@@ -139,7 +140,8 @@ public:
 
     status getStatus();
     SOCKET getSocket();
-    void* ref;
+    //void* ref;
+    std::any ref;
     // client();
     ~client();
     UServer::client::status sendData(DataBuffer& data);

@@ -8,6 +8,7 @@
 #include <string>
 #include <atomic>
 #include <thread>
+#include <any>
 
 UServer::UServer(int listenerPort, std::string listenerIP, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
