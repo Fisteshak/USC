@@ -404,6 +404,11 @@ UServer::client::status UServer::client::sendData(DataBufferStr& data)
     return _status;
 }
 
+UServer::client::~client()
+{
+    closesocket(this->fd);
+}
+
 /*
 ⠄⠄⣿⣿⣿⣿⠘⡿⢛⣿⣿⣿⣿⣿⣧⢻⣿⣿⠃⠸⣿⣿⣿⠄⠄⠄⠄⠄
 ⠄⠄⣿⣿⣿⣿⢀⠼⣛⣛⣭⢭⣟⣛⣛⣛⠿⠿⢆⡠⢿⣿⣿⠄⠄⠄⠄⠄
@@ -418,7 +423,3 @@ UServer::client::status UServer::client::sendData(DataBufferStr& data)
 ⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⠄⠄⠄⠄⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠄
 
 */
-UServer::client::~client()
-{
-    closesocket(this->fd);
-}
