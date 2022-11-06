@@ -4,6 +4,8 @@
 #include <thread>
 #include <iostream>
 #include <vector>
+#include <any>
+
 UServer server(9554, "127.0.0.1", 50);
 
 struct user{
@@ -17,7 +19,8 @@ int nUsers = 0;
 
 void data_handler(UServer::DataBuffer& data, UServer::client& cl)
 {
-    user* uref = (user*)cl.ref;
+    //user* uref = (user*)cl.ref;
+    user* uref = std::any_cast <user*> (cl.ref);
     if (uref->name == "") {
         int i = 0;
         while (data[i] != '\0'){
@@ -37,7 +40,10 @@ void data_handler(UServer::DataBuffer& data, UServer::client& cl)
 
 void disconn_handler(UServer::client& cl)
 {
-    user* uref = (user*)cl.ref;
+    //user* uref = (user*)cl.ref;
+
+    user* uref = std::any_cast <user*> (cl.ref);
+
     std::cout << uref->name << " disconnected"  << std::endl;
     uref->name = "";
     cl.ref = nullptr;
@@ -48,7 +54,9 @@ void disconn_handler(UServer::client& cl)
 void conn_handler(UServer::client& cl)
 {
     users.push_back({"", cl});
+
     cl.ref = &users.back();
+
     std::string s;
     s = "succesfully connected";
     cl.sendData(s);

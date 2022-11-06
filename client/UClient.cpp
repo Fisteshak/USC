@@ -106,7 +106,7 @@ void UClient::recvHandlingLoop()
         //при закрытии соединения со стороны сервера
         if (messageSize <= 0) {
             _status = status::disconnected;
-
+            //вызвать обработчик
             if (disconnHandler) {
                 disconnHandler();
             }
