@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 
+
 void data_handler(UClient::DataBuffer& data)
 {
     for (int i = 0; data[i] != '\0'; i++) {
@@ -38,7 +39,9 @@ int main()
     UClient::DataBufferStr data;
 
     while (true) {
-        std::cin >> data;
+
+
+        std::getline(std::cin, data, '\n');
 
         if (data == ":stop" || client.getStatus() != UClient::status::connected) {
             break;

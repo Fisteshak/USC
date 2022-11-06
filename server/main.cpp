@@ -66,10 +66,12 @@ int main()
     users.reserve(50);
     std::string x;
 
+
+
     UServer::DataBufferStr buf;
     do {
 
-        std::cin >> buf;
+        std::getline(std::cin, buf, '\n');
 
         server.sendData(buf);
 

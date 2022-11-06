@@ -63,10 +63,6 @@ UClient::status UClient::connectTo(std::string IP, uint32_t port)
         }
         recvHandlingLoopThread = std::thread(&recvHandlingLoop, this);
 
-        if (conn_handler) {
-            conn_handler();
-        }
-
     }
     else {
         closesocket(clientSocket);
