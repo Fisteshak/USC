@@ -132,11 +132,24 @@ public:
          return (fd != clientb.fd);
     }
 
+
     enum status : uint8_t {
         connected = 1,
         disconnected = 2,
         error_send_data = 3
     };
+
+    client& operator= (const client &clientb)
+    {
+        // делаем копию
+        _status = clientb._status;
+        ref = clientb.ref;
+        fd = clientb.fd;
+
+        // возвращаем существующий объект, чтобы
+        // можно было включить этот оператор в цепочку
+        return *this;
+    }
 
     status getStatus();
     SOCKET getSocket();
