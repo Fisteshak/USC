@@ -125,9 +125,14 @@ class UServer::client
 friend class UServer;
 
 public:
-    bool operator==(const UServer::client &clientb) {
-         return (fd == clientb.fd);
+    // bool operator==(const UServer::client &clientb) {
+    //      return (fd == clientb.fd);
+    // }
+    bool operator==(const client& lhs)
+    {
+        return (lhs.fd == fd);
     }
+
     bool operator!=(const UServer::client &clientb) {
          return (fd != clientb.fd);
     }

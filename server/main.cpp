@@ -10,7 +10,7 @@ UServer server(9554, "127.0.0.1", 50);
 
 struct user{
     std::string name = "";
-    UServer::client& sock;
+    UServer::client* sock;
 };
 
 std::vector <user> users;
@@ -31,8 +31,10 @@ void data_handler(UServer::DataBuffer& data, UServer::client& cl)
     }
     else {
         std::cout << uref->name << ": " << data.data() << std::endl;
-        for (auto x : users) {
-            if (x.sock != cl) x.sock.sendData(data);
+        for (int i = 0; i < nUsers; i++) {
+            if (*(users[i].sock) != cl) {
+                users[i].sock->sendData(data);
+            }
         }
         return;
     }
@@ -40,22 +42,30 @@ void data_handler(UServer::DataBuffer& data, UServer::client& cl)
 
 void disconn_handler(UServer::client& cl)
 {
-    //user* uref = (user*)cl.ref;
-
     user* uref = std::any_cast <user*> (cl.ref);
 
     std::cout << uref->name << " disconnected"  << std::endl;
+
     uref->name = "";
-    cl.ref = nullptr;
+    cl.ref.reset();
+
+    for (int i = 0; i < nUsers; i++) {
+        if (*(users[nUsers].sock) == cl) {
+            users[i] = users[nUsers];
+            break;
+        }
+    }
+    nUsers--;
 
     return;
 }
 
 void conn_handler(UServer::client& cl)
 {
-    users.push_back({"", cl});
-
-    cl.ref = &users.back();
+    users[nUsers].name = "";
+    users[nUsers].sock = &cl;
+    nUsers++;
+    cl.ref = &users[nUsers];
 
     std::string s;
     s = "succesfully connected";
@@ -71,7 +81,7 @@ int main()
     server.set_disconn_handler(disconn_handler);
     server.set_conn_handler(conn_handler);
     server.run();
-    users.reserve(50);
+    users.resize(50);
     std::string x;
 
 
