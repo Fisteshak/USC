@@ -73,6 +73,11 @@ public:
     status getStatus();
     //получить порт
     uint32_t getPort();
+    //массив клиентов
+    //каждый элемент соответствует элементу fds с тем же индексом
+    std::vector <client> clients;
+    //количество текущих подключенных соединений (включая сокет listener)
+    uint32_t nConnections = 0;
 
 private:
 
@@ -91,8 +96,6 @@ private:
     void cleanup();
     //максимальное количество соединений (включая сокет listener)
     uint32_t nMaxConnections;
-    //количество текущих подключенных соединений (включая сокет listener)
-    uint32_t nConnections = 0;
     //Port слушателя (сервера)
     int listenerPort;
     //IP слушателя (сервера)
@@ -104,9 +107,6 @@ private:
     //массив дескрипторов сокетов
     //каждый элемент соответствует элементу clients с тем же индексом
 	std::vector <struct pollfd> fds;
-    //массив клиентов
-    //каждый элемент соответствует элементу fds с тем же индексом
-    std::vector <client> clients;
     //сокет-слушатель
     SOCKET listener;
     //размер блока при получении данных
@@ -125,16 +125,14 @@ class UServer::client
 friend class UServer;
 
 public:
-    // bool operator==(const UServer::client &clientb) {
-    //      return (fd == clientb.fd);
-    // }
-    bool operator==(const client& lhs)
-    {
-        return (lhs.fd == fd);
+
+
+    bool operator==(const UServer::client &clienta) {
+        return (clienta.fd == fd);
     }
 
-    bool operator!=(const UServer::client &clientb) {
-         return (fd != clientb.fd);
+    bool operator!=(const UServer::client &clienta) {
+        return (clienta.fd != fd);
     }
 
 
@@ -173,4 +171,7 @@ private:
     //статус
     client::status _status = client::status::disconnected;
 };
+
+
+
 

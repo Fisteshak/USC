@@ -46,16 +46,24 @@ void disconn_handler(UServer::client& cl)
 
     std::cout << uref->name << " disconnected"  << std::endl;
 
-    uref->name = "";
+    for (int i = 0; i < server.nConnections; i++) {
+        std::cout << server.clients[i].getSocket() << std::endl;
+    }
+
+    for (int i = 0; i < nUsers; i++) {
+        std::cout << users[i].name << ' ' << users[i].sock << std::endl;
+    }
+
     cl.ref.reset();
 
     for (int i = 0; i < nUsers; i++) {
-        if (*(users[nUsers].sock) == cl) {
-            users[i] = users[nUsers];
+        if (*(users[i].sock) == cl) {
+            users[i] = users[nUsers-1];
             break;
         }
     }
     nUsers--;
+
 
     return;
 }
