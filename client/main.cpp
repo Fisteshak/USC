@@ -29,7 +29,14 @@ int main()
     client.setDisconnHandler(disconn_handler);
     client.setConnHandler(conn_handler);
 
+    std::cout << "Write your name: " << std::endl;
+
+    std::string name;
+    std::cin >> name;
+
     client.connectTo("127.0.0.1", 9554);
+
+    client.sendDataToServer(name);
 
     if (client.getStatus() != UClient::status::connected) {
         std::cout << "Failed to connect to a server\n";
