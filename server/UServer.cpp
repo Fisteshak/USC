@@ -256,11 +256,16 @@ void UServer::handlingLoop()
                         disconn_handler(clients[i]);
                     }
                     closesocket(fds[i].fd);
-                    fds.erase(fds.begin()+i);      //удалить из массива соединений
-                    clients.erase(clients.begin()+i);      //удалить из массива соединений
 
-                    fds.push_back({});
-                    clients.push_back({});
+                    fds[i] = fds[nConnections-1];
+                    clients[i] = clients[nConnections-1];
+
+
+                    // fds.erase(fds.begin()+i);      //удалить из массива соединений
+                    // clients.erase(clients.begin()+i);      //удалить из массива соединений
+
+                    // fds.push_back({});
+                    // clients.push_back({});
 
                     nConnections--;
 
@@ -275,11 +280,16 @@ void UServer::handlingLoop()
                         }
                     }
                     closesocket(fds[i].fd);
-                    fds.erase(fds.begin()+i);      //удалить из массива соединений
-                    clients.erase(clients.begin()+i);      //удалить из массива соединений
 
-                    fds.push_back({});
-                    clients.push_back({});
+                    fds[i] = fds[nConnections-1];
+                    clients[i] = clients[nConnections-1];
+
+
+                    // fds.erase(fds.begin()+i);      //удалить из массива соединений
+                    // clients.erase(clients.begin()+i);      //удалить из массива соединений
+
+                    // fds.push_back({});
+                    // clients.push_back({});
 
                     nConnections--;
 

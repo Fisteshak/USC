@@ -58,10 +58,4 @@ _deps
 
 #not sure what are files in this folder
 build/
-
-#exe files
-!bin/server.exe
-!bin/client.exe
-!bin/libgcc_s_seh-1.dll
-!bin/libstdc++-6.dll
-!bin/libwinpthread-1.dll
+bin/server.exe
