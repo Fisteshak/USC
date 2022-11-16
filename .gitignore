@@ -58,3 +58,7 @@ _deps
 
 #not sure what are files in this folder
 build/
+
+#exe files
+!bin/server.exe
+!bin/client.exe
