@@ -44,6 +44,8 @@
 # Built Visual Studio Code Extensions
 *.vsix
 
+
+# CMake files
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
@@ -55,6 +57,13 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+CPackConfig.cmake
+CPackSourceConfig.cmake
+DartConfiguration.tcl
 
 #not sure what are files in this folder
 build/
+
+.vscode/settings.json
+
+
