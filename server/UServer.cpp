@@ -257,15 +257,9 @@ void UServer::handlingLoop()
                     }
                     closesocket(fds[i].fd);
 
+
                     fds[i] = fds[nConnections-1];
                     clients[i] = clients[nConnections-1];
-
-
-                    // fds.erase(fds.begin()+i);      //удалить из массива соединений
-                    // clients.erase(clients.begin()+i);      //удалить из массива соединений
-
-                    // fds.push_back({});
-                    // clients.push_back({});
 
                     nConnections--;
 
@@ -274,22 +268,15 @@ void UServer::handlingLoop()
                 //если recv вернул ошибку
                 if (recieved_data == SOCKET_ERROR) {
                     //при "жестком" закрытии соединения
-                    if (WSAGetLastError() == WSAECONNRESET) {
+                    //if (WSAGetLastError() == WSAECONNRESET) {
                         if (disconn_handler) {
                             disconn_handler(clients[i]);
                         }
-                    }
+                    //}
                     closesocket(fds[i].fd);
 
                     fds[i] = fds[nConnections-1];
                     clients[i] = clients[nConnections-1];
-
-
-                    // fds.erase(fds.begin()+i);      //удалить из массива соединений
-                    // clients.erase(clients.begin()+i);      //удалить из массива соединений
-
-                    // fds.push_back({});
-                    // clients.push_back({});
 
                     nConnections--;
 
