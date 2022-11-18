@@ -43,10 +43,10 @@ public:
     };
 
     //конструктор с указанием
-    //порта
     //IP
+    //порта
     //максимального кол-ва соединенией (опционально)
-    UServer(int listenerPort, std::string listenerIP, uint32_t nMaxConnections = 100);
+    UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections = 100);
     //деструктор
     ~UServer();
 

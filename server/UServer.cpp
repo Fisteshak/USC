@@ -10,7 +10,7 @@
 #include <thread>
 #include <any>
 
-UServer::UServer(int listenerPort, std::string listenerIP, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
+UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
     if (nMaxConnections == 0) {
         throw std::runtime_error("nMaxConnections value should not be zero");
@@ -250,6 +250,13 @@ void UServer::handlingLoop()
                     }
                 }
 
+                /*
+                При закрытии соединения оставляем пустое место,
+                на которое позже запишется новое соединение.
+                Менять местами элементы нельзя, т.к. это поломает
+                ссылки на него со стороны пользователя.
+                */
+
                 //при нормальном закрытии соединения
                 if (recieved_data == 0) {
                     if (disconn_handler) {
@@ -259,13 +266,6 @@ void UServer::handlingLoop()
 
                     fds[i] = fds[nConnections-1];
                     clients[i] = clients[nConnections-1];
-
-
-                    // fds.erase(fds.begin()+i);      //удалить из массива соединений
-                    // clients.erase(clients.begin()+i);      //удалить из массива соединений
-
-                    // fds.push_back({});
-                    // clients.push_back({});
 
                     nConnections--;
 
@@ -283,13 +283,6 @@ void UServer::handlingLoop()
 
                     fds[i] = fds[nConnections-1];
                     clients[i] = clients[nConnections-1];
-
-
-                    // fds.erase(fds.begin()+i);      //удалить из массива соединений
-                    // clients.erase(clients.begin()+i);      //удалить из массива соединений
-
-                    // fds.push_back({});
-                    // clients.push_back({});
 
                     nConnections--;
 

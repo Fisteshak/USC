@@ -9,7 +9,7 @@
 
 //#define DEBUG
 
-UServer server(9554, "127.0.0.1", 50);
+UServer server("127.0.0.1", 9554, 50);
 
 struct user{
     std::string name = "";
@@ -67,6 +67,7 @@ void disconn_handler(UServer::client& cl)
     for (int i = 0; i < nUsers; i++) {
         if (*(users[i].sock) == cl) {
             users[i] = users[nUsers-1];
+            users[i].sock->ref = users[i];
             break;
         }
     }
