@@ -62,7 +62,9 @@ void disconn_handler(UServer::client& cl)
         std::cerr << users[i].name << ' ' << users[i].sock << std::endl;
     }
 
-    cl.ref.reset();
+
+    cl.ref = nullptr;
+
 
     for (int i = 0; i < nUsers; i++) {
         if (*(users[i].sock) == cl) {
