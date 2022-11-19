@@ -19,15 +19,14 @@ public:
     //тип буфера для данных
     using DataBuffer = std::vector <char>;
     using DataBufferStr = std::string;
-    class client;
+    class Client;
 
 private:
 
     //тип обработчика данных
-    using data_handler_t = std::function <void(DataBuffer&, client&)>;
+    using DataHandler = std::function <void(DataBuffer&, Client&)>;
     //тип обработчика принятия соединения
-
-    using conn_handler_t = std::function <void(client&)>;
+    using ConnHandler = std::function <void(Client&)>;
 
 public:
 
@@ -55,27 +54,27 @@ public:
     //останавливает сервер
     void stop();
     //получить размер посылки
-    uint32_t get_block_size();
+    uint32_t getBlockSize();
     //установить размер посылка
-    void set_block_size(uint32_t size);
+    void setBlockSize(uint32_t size);
     //установить обработчик получения данных
-    void set_data_handler(data_handler_t handler);
+    void setDataHandler(const DataHandler handler);
     //установить обработчик принятия соединения
-    void set_conn_handler(conn_handler_t handler);
+    void setConnHandler(const ConnHandler handler);
     //установить обработчик отключения соединения
-    void set_disconn_handler(conn_handler_t handler);
+    void setDisconnHandler(const ConnHandler handler);
     //отправить данные всем клиентам
-    void sendData(DataBuffer& data);
-    void sendData(DataBufferStr& data);
+    void sendData(const DataBuffer& data);
+    void sendData(const DataBufferStr& data);
     //отправить данные выбранному клиенту
-    void sendDataTo(DataBuffer& data, client& cl);
+    void sendDataTo(const DataBuffer& data, Client& cl);
     //получить статус
     status getStatus();
     //получить порт
     uint32_t getPort();
     //массив клиентов
     //каждый элемент соответствует элементу fds с тем же индексом
-    std::vector <client> clients;
+    std::vector <Client> clients;
     //количество текущих подключенных соединений (включая сокет listener)
     uint32_t nConnections = 0;
 
@@ -92,7 +91,12 @@ private:
     void cleanupWinsock();
     //цикл приема данных
     void handlingLoop();
-    //закрывает и уничтожает массивы соединений
+    //закрыть соедиение под указанным номером
+    void closeConnection(const uint32_t connectionNum);
+    //добавить соединение в массив соединенией
+    //возвращает номер соединения в массиве fds/clients
+    uint32_t addConnection(const SOCKET newConneection);
+    //закрывает и уничтожает массивы соединений fds/clients
     void cleanup();
     //максимальное количество соединений (включая сокет listener)
     uint32_t nMaxConnections;
@@ -112,26 +116,26 @@ private:
     //размер блока при получении данных
     uint32_t block_size = 1024;
     //обработчик получений данных
-    data_handler_t data_handler;
+    DataHandler dataHandler;
     //обработчик принятия нового соединения
-    conn_handler_t conn_handler;
+    ConnHandler connHandler;
     //обработчик отключения соединения
-    conn_handler_t disconn_handler;
+    ConnHandler disconnHandler;
 
 };
 
-class UServer::client
+class UServer::Client
 {
 friend class UServer;
 
 public:
 
 
-    bool operator==(const UServer::client &clienta) {
+    bool operator==(const UServer::Client &clienta) {
         return (clienta.fd == fd);
     }
 
-    bool operator!=(const UServer::client &clienta) {
+    bool operator!=(const UServer::Client &clienta) {
         return (clienta.fd != fd);
     }
 
@@ -142,7 +146,7 @@ public:
         error_send_data = 3
     };
 
-    client& operator= (const client &clientb)
+    Client& operator= (const Client &clientb)
     {
         // делаем копию
         _status = clientb._status;
@@ -159,9 +163,9 @@ public:
     //void* ref;
     std::any ref;
     // client();
-    ~client();
-    UServer::client::status sendData(DataBuffer& data);
-    UServer::client::status sendData(DataBufferStr& data);
+    ~Client();
+    UServer::Client::status sendData(DataBuffer& data);
+    UServer::Client::status sendData(DataBufferStr& data);
 
     void disconnect();
 private:
@@ -169,7 +173,7 @@ private:
     SOCKET fd;
     //ссылка на пользовательский обьект
     //статус
-    client::status _status = client::status::disconnected;
+    Client::status _status = Client::status::disconnected;
 };
 
 

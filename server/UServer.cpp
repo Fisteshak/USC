@@ -161,12 +161,12 @@ void UServer::cleanup()
     clients.clear();
 }
 
-uint32_t UServer::get_block_size()
+uint32_t UServer::getBlockSize()
 {
 	return block_size;
 }
 
-void UServer::set_block_size(uint32_t size)
+void UServer::setBlockSize(uint32_t size)
 {
 	block_size = size;
     return;
@@ -219,21 +219,13 @@ void UServer::handlingLoop()
                         break;
                     }
 
-                    //ищем первую пустую ячейку
-                    auto firstEmpty = find_if(fds.begin(), fds.end(), [](const pollfd& sock){ return sock.fd == 0; });
+                    //добавить в массив соединений
+                    int newConnInd = addConnection(new_conn);
 
-                    int firstEmptyInd = firstEmpty - fds.begin();
-
-                    nConnections++;
-
-                    fds[firstEmptyInd] = {new_conn, POLLIN, 0}; //добавить в массив fds
-
-                    clients[firstEmptyInd].fd = fds[firstEmptyInd].fd;
-                    clients[firstEmptyInd]._status = client::connected;
-
-                    if (conn_handler) {
-                        conn_handler(clients[firstEmptyInd]);
+                    if (connHandler) {
+                        connHandler(clients[newConnInd]);
                     }
+
                 }
                 handledEvents++;
             }
@@ -251,17 +243,15 @@ void UServer::handlingLoop()
 		//перебрать все сокеты до тех пор пока не обработаем все полученные события
         DataBuffer data_buf(block_size);		//буфер для данных
         for (int i = 1; handledEvents < events_num; i++) {
-
             if (fds[i].revents != 0 && fds[i].fd != 0)       //если есть входящие данные и сокет не пустой
-
             {
                 int recievedDataLen;		//количество прочитанных байт
 				recievedDataLen = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать
 
                 //если мы успешно прочитали данные
                 if (recievedDataLen > 0) {
-                    if (data_handler) {
-                        data_handler(data_buf, clients[i]);  //вызвать обработчик
+                    if (dataHandler) {
+                        dataHandler(data_buf, clients[i]);  //вызвать обработчик
                     }
                 }
 
@@ -274,44 +264,25 @@ void UServer::handlingLoop()
 
                 //при нормальном закрытии соединения
                 if (recievedDataLen == 0) {
-                    if (disconn_handler) {
-                        disconn_handler(clients[i]);
+                    if (disconnHandler) {
+                        disconnHandler(clients[i]);
                     }
-                    closesocket(fds[i].fd);
-
-                    //сбросить параметры
-                    fds[i].fd = 0;
-                    fds[i].events = 0;
-                    clients[i].ref.reset();
-                    clients[i].fd = 0;
-
-                    nConnections--;
-
+                    closeConnection(i);
                 }
 
+                //TODO: добавить обработчик ошибок
                 //если recv вернул ошибку
                 //сокет закрываем в любом случае
-
-                //TODO: добавить обработчик ошибок
-
                 if (recievedDataLen == SOCKET_ERROR) {
                     //при "жестком" закрытии соединения
 
                     if (WSAGetLastError() == WSAECONNRESET) {
-                        if (disconn_handler) {
-                            disconn_handler(clients[i]);
+                        if (disconnHandler) {
+                            disconnHandler(clients[i]);
                         }
                     }
-                    closesocket(fds[i].fd);
 
-                    //сбросить параметры
-                    fds[i].fd = 0;
-                    fds[i].events = 0;
-                    clients[i].ref.reset();
-                    clients[i].fd = 0;
-
-
-                    nConnections--;
+                    closeConnection(i);
                 }
 
                 handledEvents++;
@@ -358,8 +329,37 @@ UServer::status UServer::run()
 	return _status;
 }
 
+uint32_t UServer::addConnection(const SOCKET newConnection)
+{
+    //ищем первую пустую ячейку
+    auto firstEmpty = find_if(fds.begin(), fds.end(), [](const pollfd& sock) { return sock.fd == 0; });
+    int firstEmptyInd = firstEmpty - fds.begin();
 
-void UServer::sendData(DataBuffer& data)
+    nConnections++;
+
+    fds[firstEmptyInd] = { newConnection, POLLIN, 0 }; //добавить в массив fds
+
+    clients[firstEmptyInd].fd = fds[firstEmptyInd].fd;
+    clients[firstEmptyInd]._status = Client::connected;
+
+    return firstEmptyInd;
+}
+
+
+void UServer::closeConnection(const uint32_t connectionNum)
+{
+    closesocket(fds[connectionNum].fd);
+
+    //сбросить параметры
+    fds[connectionNum].fd = 0;
+    fds[connectionNum].events = 0;
+    clients[connectionNum].ref.reset();
+    clients[connectionNum].fd = 0;
+
+    nConnections--;
+}
+
+void UServer::sendData(const DataBuffer& data)
 {
     int handledConnections = 1;
 
@@ -376,7 +376,7 @@ void UServer::sendData(DataBuffer& data)
     return;
 }
 
-void UServer::sendData(DataBufferStr& data)
+void UServer::sendData(const DataBufferStr& data)
 {
     int handledConnections = 1;
 
@@ -392,35 +392,34 @@ void UServer::sendData(DataBufferStr& data)
     }
     return;
 }
-void UServer::set_data_handler(data_handler_t handler)
+void UServer::setDataHandler(const DataHandler handler)
 {
-    data_handler = handler;
+    dataHandler = handler;
     return;
 }
 
-void UServer::set_conn_handler(conn_handler_t handler)
+void UServer::setConnHandler(const ConnHandler handler)
 {
-    conn_handler = handler;
+    connHandler = handler;
     return;
 
 }
-
-void UServer::set_disconn_handler(conn_handler_t handler)
+void UServer::setDisconnHandler(const ConnHandler handler)
 {
-    disconn_handler = handler;
+    disconnHandler = handler;
     return;
 }
 
-UServer::client::status UServer::client::getStatus()
+UServer::Client::status UServer::Client::getStatus()
 {
     return _status;
 }
-SOCKET UServer::client::getSocket()
+SOCKET UServer::Client::getSocket()
 {
     return fd;
 }
 
-UServer::client::status UServer::client::sendData(DataBuffer& data)
+UServer::Client::status UServer::Client::sendData(DataBuffer& data)
 {
     int dataLen = send(fd, data.data(), data.size(), 0);
     if (dataLen == SOCKET_ERROR) {
@@ -430,7 +429,7 @@ UServer::client::status UServer::client::sendData(DataBuffer& data)
     return _status;
 }
 
-UServer::client::status UServer::client::sendData(DataBufferStr& data)
+UServer::Client::status UServer::Client::sendData(DataBufferStr& data)
 {
     int dataLen = send(fd, data.data(), data.size(), 0);
     if (dataLen == SOCKET_ERROR) {
@@ -440,7 +439,7 @@ UServer::client::status UServer::client::sendData(DataBufferStr& data)
     return _status;
 }
 
-UServer::client::~client()
+UServer::Client::~Client()
 {
     closesocket(this->fd);
 }

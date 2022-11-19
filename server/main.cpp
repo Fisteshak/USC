@@ -13,7 +13,7 @@ UServer server("127.0.0.1", 9554, 50);
 
 struct user{
     std::string name = "";
-    UServer::client* sock;
+    UServer::Client* sock;
 };
 
 
@@ -21,7 +21,7 @@ std::vector <user> users;
 int nUsers = 0;
 
 
-void data_handler(UServer::DataBuffer& data, UServer::client& cl)
+void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 {
 
     //user* uref = (user*)cl.ref;
@@ -51,7 +51,7 @@ void data_handler(UServer::DataBuffer& data, UServer::client& cl)
     }
 }
 
-void disconn_handler(UServer::client& cl)
+void disconn_handler(UServer::Client& cl)
 {
     user* uref = std::any_cast <user*> (cl.ref);
 
@@ -79,7 +79,7 @@ void disconn_handler(UServer::client& cl)
     return;
 }
 
-void conn_handler(UServer::client& cl)
+void conn_handler(UServer::Client& cl)
 {
     users[nUsers].name = "";
     users[nUsers].sock = &cl;
@@ -100,9 +100,9 @@ int main()
     std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
     #endif
 
-    server.set_data_handler(data_handler);
-    server.set_disconn_handler(disconn_handler);
-    server.set_conn_handler(conn_handler);
+    server.setDataHandler(data_handler);
+    server.setDisconnHandler(disconn_handler);
+    server.setConnHandler(conn_handler);
     server.run();
 
     std::cout << "[server] Server started working" << std::endl;
