@@ -20,8 +20,8 @@ UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnecti
     }
     this->nMaxConnections = nMaxConnections+1;
 
-    fds.resize(nMaxConnections);
-    clients.resize(nMaxConnections);
+    fds.resize(this->nMaxConnections);
+    clients.resize(this->nMaxConnections);
 
     return;
 }
@@ -122,8 +122,13 @@ void UServer::stop()
         _status = status::stopped;
 
         closesocket(listener);
-        for (int i = 1; i < nConnections; i++) {
-            closesocket(fds[i].fd);
+
+        int handledConnections = 0;
+        for (int i = 1; handledConnections < nConnections; i++) {
+            if (fds[i].fd != 0) {
+                closesocket(fds[i].fd);
+                handledConnections++;
+            }
         }
 
         joinThreads();
@@ -143,8 +148,13 @@ void UServer::joinThreads()
 void UServer::cleanup()
 {
     closesocket(listener);
-    for (int i = 1; i < nConnections; i++) {
-        closesocket(fds[i].fd);
+
+    int handledConnections = 0;
+    for (int i = 1; handledConnections < nConnections; i++) {
+        if (fds[i].fd != 0) {
+            closesocket(fds[i].fd);
+            handledConnections++;
+        }
     }
 
     fds.clear();
@@ -177,7 +187,7 @@ void UServer::handlingLoop()
 {
 	while (_status == status::up) {
         uint32_t events_num;    //количество полученных событий от сокетов
-		events_num = WSAPoll(fds.data(), nConnections, -1);   //ждать входящих событий
+		events_num = WSAPoll(fds.data(), nMaxConnections, -1);   //ждать входящих событий
 
         //в случае если сервер был остановлен извне (.stop)
         if (_status != status::up) {
@@ -190,7 +200,7 @@ void UServer::handlingLoop()
             return;
         }
 
-        int handled_events = 0;
+        int handledEvents = 0;
 
         //если на слушателе есть событие
         if (fds[0].revents != 0) {
@@ -209,17 +219,23 @@ void UServer::handlingLoop()
                         break;
                     }
 
-                    nConnections++;
-                    fds[nConnections - 1] = {new_conn, POLLIN, 0}; //добавить в массив fds
+                    //ищем первую пустую ячейку
+                    auto firstEmpty = find_if(fds.begin(), fds.end(), [](const pollfd& sock){ return sock.fd == 0; });
 
-                    clients[nConnections - 1].fd = new_conn;
-                    clients[nConnections - 1]._status = client::connected;
+                    int firstEmptyInd = firstEmpty - fds.begin();
+
+                    nConnections++;
+
+                    fds[firstEmptyInd] = {new_conn, POLLIN, 0}; //добавить в массив fds
+
+                    clients[firstEmptyInd].fd = fds[firstEmptyInd].fd;
+                    clients[firstEmptyInd]._status = client::connected;
 
                     if (conn_handler) {
-                        conn_handler(clients[nConnections - 1]);
+                        conn_handler(clients[firstEmptyInd]);
                     }
                 }
-                handled_events++;
+                handledEvents++;
             }
             //иначе это ошибка
             else {
@@ -234,17 +250,16 @@ void UServer::handlingLoop()
 
 		//перебрать все сокеты до тех пор пока не обработаем все полученные события
         DataBuffer data_buf(block_size);		//буфер для данных
-        for (int i = 1; handled_events < events_num; i++) {
+        for (int i = 1; handledEvents < events_num; i++) {
 
-            //if (fds[i].revents | POLLIN)       //если есть входящие данные
-            if (fds[i].revents != 0)       //если есть входящие данные
+            if (fds[i].revents != 0 && fds[i].fd != 0)       //если есть входящие данные и сокет не пустой
 
             {
-                int recieved_data;		//количество прочитанных байт
-				recieved_data = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать
+                int recievedDataLen;		//количество прочитанных байт
+				recievedDataLen = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать
 
                 //если мы успешно прочитали данные
-                if (recieved_data > 0) {
+                if (recievedDataLen > 0) {
                     if (data_handler) {
                         data_handler(data_buf, clients[i]);  //вызвать обработчик
                     }
@@ -254,42 +269,52 @@ void UServer::handlingLoop()
                 При закрытии соединения оставляем пустое место,
                 на которое позже запишется новое соединение.
                 Менять местами элементы нельзя, т.к. это поломает
-                ссылки на него со стороны пользователя.
+                ссылки на них со стороны пользователя.
                 */
 
                 //при нормальном закрытии соединения
-                if (recieved_data == 0) {
+                if (recievedDataLen == 0) {
                     if (disconn_handler) {
                         disconn_handler(clients[i]);
                     }
                     closesocket(fds[i].fd);
 
-
-                    fds[i] = fds[nConnections-1];
-                    clients[i] = clients[nConnections-1];
+                    //сбросить параметры
+                    fds[i].fd = 0;
+                    fds[i].events = 0;
+                    clients[i].ref.reset();
+                    clients[i].fd = 0;
 
                     nConnections--;
 
                 }
 
                 //если recv вернул ошибку
-                if (recieved_data == SOCKET_ERROR) {
+                //сокет закрываем в любом случае
+
+                //TODO: добавить обработчик ошибок
+
+                if (recievedDataLen == SOCKET_ERROR) {
                     //при "жестком" закрытии соединения
-                    //if (WSAGetLastError() == WSAECONNRESET) {
+
+                    if (WSAGetLastError() == WSAECONNRESET) {
                         if (disconn_handler) {
                             disconn_handler(clients[i]);
                         }
-                    //}
+                    }
                     closesocket(fds[i].fd);
 
-                    fds[i] = fds[nConnections-1];
-                    clients[i] = clients[nConnections-1];
+                    //сбросить параметры
+                    fds[i].fd = 0;
+                    fds[i].events = 0;
+                    clients[i].ref.reset();
+                    clients[i].fd = 0;
+
 
                     nConnections--;
-
                 }
 
-                handled_events++;
+                handledEvents++;
 
             }
         }
@@ -336,12 +361,16 @@ UServer::status UServer::run()
 
 void UServer::sendData(DataBuffer& data)
 {
+    int handledConnections = 1;
 
-    for (int i = 1; i < nConnections; i++) {
-        int data_len = send(fds[i].fd, data.data(), data.size(), 0);
-        if (data_len < 0) { //если есть ошибка, то закрываем соединение
-            std::cout << "Error sending data " << WSAGetLastError() << std::endl;
-            // close_conn = true;					//закрываем соединение
+    for (int i = 1; handledConnections < nConnections; i++) {
+        if (fds[i].fd != 0) {
+            int data_len = send(fds[i].fd, data.data(), data.size(), 0);
+            if (data_len < 0) { //если есть ошибка, то закрываем соединение
+                std::cout << "Error sending data " << WSAGetLastError() << std::endl;
+                // close_conn = true;					//закрываем соединение
+            }
+            handledConnections++;
         }
     }
     return;
@@ -349,17 +378,20 @@ void UServer::sendData(DataBuffer& data)
 
 void UServer::sendData(DataBufferStr& data)
 {
+    int handledConnections = 1;
 
-    for (int i = 1; i < nConnections; i++) {
-        int data_len = send(fds[i].fd, data.data(), data.size(), 0);
-        if (data_len < 0) { //если есть ошибка, то закрываем соединение
-            std::cout << "Error sending data " << WSAGetLastError() << std::endl;
-            // close_conn = true;					//закрываем соединение
+    for (int i = 1; handledConnections < nConnections; i++) {
+        if (fds[i].fd != 0) {
+            int data_len = send(fds[i].fd, data.data(), data.size(), 0);
+            if (data_len < 0) { //если есть ошибка, то закрываем соединение
+                std::cout << "Error sending data " << WSAGetLastError() << std::endl;
+                // close_conn = true;					//закрываем соединение
+            }
+            handledConnections++;
         }
     }
     return;
 }
-
 void UServer::set_data_handler(data_handler_t handler)
 {
     data_handler = handler;

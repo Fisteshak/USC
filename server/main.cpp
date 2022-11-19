@@ -69,7 +69,7 @@ void disconn_handler(UServer::client& cl)
     for (int i = 0; i < nUsers; i++) {
         if (*(users[i].sock) == cl) {
             users[i] = users[nUsers-1];
-            users[i].sock->ref = users[i];
+            users[i].sock->ref = &users[i];
             break;
         }
     }
