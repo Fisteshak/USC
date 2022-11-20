@@ -63,6 +63,7 @@ public:
     void setConnHandler(const ConnHandler handler);
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
+    void sendRaw();
     //отправить данные всем клиентам
     void sendData(const DataBuffer& data);
     void sendData(const DataBufferStr& data);
@@ -175,7 +176,3 @@ private:
     //статус
     Client::status _status = Client::status::disconnected;
 };
-
-
-
-

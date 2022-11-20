@@ -8,6 +8,7 @@
 #include <string>
 #include <atomic>
 #include <thread>
+#include <vector>
 #include <any>
 
 UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
@@ -177,7 +178,6 @@ UServer::status UServer::getStatus()
     return _status;
 }
 
-
 uint32_t UServer::getPort()
 {
     return listenerPort;
@@ -323,8 +323,6 @@ UServer::status UServer::run()
 	return _status;
 }
 
-
-
 /*
 При закрытии соединения оставляем пустое место,
 на которое позже запишется новое соединение.
@@ -371,7 +369,11 @@ void UServer::sendData(const DataBuffer& data)
 
     for (int i = 1; handledConnections < nConnections; i++) {
         if (fds[i].fd != 0) {
+            char x[4]{};
+            *(int*)x = data.size();
+            int y = *(int*)x;
             int data_len = send(fds[i].fd, data.data(), data.size(), 0);
+
             if (data_len < 0) { //если есть ошибка, то закрываем соединение
                 std::cout << "Error sending data " << WSAGetLastError() << std::endl;
                 // close_conn = true;					//закрываем соединение
@@ -381,18 +383,31 @@ void UServer::sendData(const DataBuffer& data)
     }
     return;
 }
-
+/*
+char x[4]{};
+*(int *)x = data.size();
+int y = *(int *)x;
+*/
 void UServer::sendData(const DataBufferStr& data)
 {
     int handledConnections = 1;
 
     for (int i = 1; handledConnections < nConnections; i++) {
         if (fds[i].fd != 0) {
-            int data_len = send(fds[i].fd, data.data(), data.size(), 0);
+
+            char dataSize[4]{}; //размер пакета, занимает первые 4 байта
+            *(int *)dataSize = data.size();
+
+            int data_len;
+            data_len = send(fds[i].fd, dataSize, 4, 0);
+
             if (data_len < 0) { //если есть ошибка, то закрываем соединение
                 std::cout << "Error sending data " << WSAGetLastError() << std::endl;
                 // close_conn = true;					//закрываем соединение
             }
+
+            data_len += send(fds[i].fd, data.data(), data.size(), 0);
+
             handledConnections++;
         }
     }
@@ -420,6 +435,7 @@ UServer::Client::status UServer::Client::getStatus()
 {
     return _status;
 }
+
 SOCKET UServer::Client::getSocket()
 {
     return fd;
