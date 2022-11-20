@@ -28,7 +28,7 @@ bool UClient::initWinsock()
     return true;
 }
 
-UClient::status UClient::connectTo(std::string IP, uint32_t port)
+UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
 {
     clientSocket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -124,7 +124,7 @@ void UClient::joinThreads()
     return;
 }
 
-UClient::status UClient::sendDataToServer(DataBuffer& data)
+UClient::status UClient::sendDataToServer(const DataBuffer& data)
 {
     if (_status == status::connected) {
         int dataLen = send(clientSocket, data.data(), data.size(), 0);
@@ -136,7 +136,7 @@ UClient::status UClient::sendDataToServer(DataBuffer& data)
     return _status;
 }
 
-UClient::status UClient::sendDataToServer(DataBufferStr& data)
+UClient::status UClient::sendDataToServer(const DataBufferStr& data)
 {
     if (_status == status::connected) {
         int dataLen = send(clientSocket, data.data(), data.size(), 0);
@@ -158,26 +158,26 @@ uint32_t UClient::getBlockSize()
 	return blockSize;
 }
 
-void UClient::setBlockSize(uint32_t size)
+void UClient::setBlockSize(const uint32_t size)
 {
 	blockSize = size;
     return;
 }
 
-void UClient::setDataHandler(DataHandler handler)
+void UClient::setDataHandler(const DataHandler handler)
 {
     dataHandler = handler;
     return;
 }
 
-void UClient::setConnHandler(ConnHandler handler)
+void UClient::setConnHandler(const ConnHandler handler)
 {
     connHandler = handler;
     return;
 
 }
 
-void UClient::setDisconnHandler(ConnHandler handler)
+void UClient::setDisconnHandler(const ConnHandler handler)
 {
     disconnHandler = handler;
     return;

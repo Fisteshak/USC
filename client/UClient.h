@@ -28,7 +28,7 @@ public:
     void pause();
 
     //присоединиться к серверу и начать принимать данные
-    status connectTo(std::string IP, uint32_t port);
+    status connectTo(const std::string& IP, const uint32_t port);
     //отсоединиться от сервера
     void disconnect();
 
@@ -44,19 +44,18 @@ public:
     using ConnHandler = std::function <void()>;
 
     //установить размер посылки
-    void setBlockSize(uint32_t size);
+    void setBlockSize(const uint32_t size);
     uint32_t getBlockSize();
     //установить обработчик получения данных
-    void setDataHandler(DataHandler handler);
+    void setDataHandler(const DataHandler handler);
     //установить обработчик принятия соединения
-    void setConnHandler(ConnHandler handler);
+    void setConnHandler(const ConnHandler handler);
     //установить обработчик отключения соединения
-    void setDisconnHandler(ConnHandler handler);
+    void setDisconnHandler(const ConnHandler handler);
     //отправить данные всем клиентам
 
-
-    status sendDataToServer(DataBuffer& data);
-    status sendDataToServer(DataBufferStr& data);
+    status sendDataToServer(const DataBuffer& data);
+    status sendDataToServer(const DataBufferStr& data);
 
     int getLastError();
 

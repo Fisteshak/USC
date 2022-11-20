@@ -166,7 +166,7 @@ uint32_t UServer::getBlockSize()
 	return block_size;
 }
 
-void UServer::setBlockSize(uint32_t size)
+void UServer::setBlockSize(const uint32_t size)
 {
 	block_size = size;
     return;
@@ -255,12 +255,6 @@ void UServer::handlingLoop()
                     }
                 }
 
-                /*
-                При закрытии соединения оставляем пустое место,
-                на которое позже запишется новое соединение.
-                Менять местами элементы нельзя, т.к. это поломает
-                ссылки на них со стороны пользователя.
-                */
 
                 //при нормальном закрытии соединения
                 if (recievedDataLen == 0) {
@@ -329,6 +323,32 @@ UServer::status UServer::run()
 	return _status;
 }
 
+
+
+/*
+При закрытии соединения оставляем пустое место,
+на которое позже запишется новое соединение.
+Менять местами элементы нельзя, т.к. это поломает
+ссылки на них со стороны пользователя.
+*/
+
+void UServer::closeConnection(const uint32_t connectionNum)
+{
+    closesocket(fds[connectionNum].fd);
+
+    //сбросить параметры
+    fds[connectionNum].fd = 0;
+    fds[connectionNum].events = 0;
+    clients[connectionNum].ref.reset();
+    clients[connectionNum].fd = 0;
+
+    nConnections--;
+}
+
+/*
+добавляет соединение в первую пустую ячейку
+*/
+
 uint32_t UServer::addConnection(const SOCKET newConnection)
 {
     //ищем первую пустую ячейку
@@ -343,20 +363,6 @@ uint32_t UServer::addConnection(const SOCKET newConnection)
     clients[firstEmptyInd]._status = Client::connected;
 
     return firstEmptyInd;
-}
-
-
-void UServer::closeConnection(const uint32_t connectionNum)
-{
-    closesocket(fds[connectionNum].fd);
-
-    //сбросить параметры
-    fds[connectionNum].fd = 0;
-    fds[connectionNum].events = 0;
-    clients[connectionNum].ref.reset();
-    clients[connectionNum].fd = 0;
-
-    nConnections--;
 }
 
 void UServer::sendData(const DataBuffer& data)
@@ -419,7 +425,7 @@ SOCKET UServer::Client::getSocket()
     return fd;
 }
 
-UServer::Client::status UServer::Client::sendData(DataBuffer& data)
+UServer::Client::status UServer::Client::sendData(const DataBuffer& data)
 {
     int dataLen = send(fd, data.data(), data.size(), 0);
     if (dataLen == SOCKET_ERROR) {
@@ -429,7 +435,7 @@ UServer::Client::status UServer::Client::sendData(DataBuffer& data)
     return _status;
 }
 
-UServer::Client::status UServer::Client::sendData(DataBufferStr& data)
+UServer::Client::status UServer::Client::sendData(const DataBufferStr& data)
 {
     int dataLen = send(fd, data.data(), data.size(), 0);
     if (dataLen == SOCKET_ERROR) {

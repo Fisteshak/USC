@@ -56,7 +56,7 @@ public:
     //получить размер посылки
     uint32_t getBlockSize();
     //установить размер посылка
-    void setBlockSize(uint32_t size);
+    void setBlockSize(const uint32_t size);
     //установить обработчик получения данных
     void setDataHandler(const DataHandler handler);
     //установить обработчик принятия соединения
@@ -160,18 +160,18 @@ public:
 
     status getStatus();
     SOCKET getSocket();
-    //void* ref;
+    //пользовательская переменная
     std::any ref;
     // client();
+
     ~Client();
-    UServer::Client::status sendData(DataBuffer& data);
-    UServer::Client::status sendData(DataBufferStr& data);
+    UServer::Client::status sendData(const DataBuffer& data);
+    UServer::Client::status sendData(const DataBufferStr& data);
 
     void disconnect();
 private:
     //дескриптор сокета
     SOCKET fd;
-    //ссылка на пользовательский обьект
     //статус
     Client::status _status = Client::status::disconnected;
 };
