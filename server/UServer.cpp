@@ -363,31 +363,53 @@ uint32_t UServer::addConnection(const SOCKET newConnection)
     return firstEmptyInd;
 }
 
+
+int UServer::sendAll(const Socket fd, const char *data, int& len)
+{
+    int total = 0;        // сколько байт отправили
+    int bytesleft = len; // сколько байт осталось отправить
+    int n;
+
+    //упаковываем размер в массив на 4 байта
+    char dataLen[4]{};
+    *(int *)dataLen = len;
+    //отправляем размер
+    n = send(fd, dataLen, bytesleft, 0);
+
+    while(total < len) {
+        n = send(fd, data+total, bytesleft, 0);
+        if (n == -1) { break; }
+        total += n;
+        bytesleft -= n;
+    }
+
+    len = total; // возвратить количество отправленных байт
+
+    return n==-1?-1:0; // вернуть -1 при ошибке, 0 при нормальном завершении
+}
+
+
 void UServer::sendData(const DataBuffer& data)
 {
     int handledConnections = 1;
 
     for (int i = 1; handledConnections < nConnections; i++) {
         if (fds[i].fd != 0) {
-            char x[4]{};
-            *(int*)x = data.size();
-            int y = *(int*)x;
-            int data_len = send(fds[i].fd, data.data(), data.size(), 0);
 
-            if (data_len < 0) { //если есть ошибка, то закрываем соединение
-                std::cout << "Error sending data " << WSAGetLastError() << std::endl;
-                // close_conn = true;					//закрываем соединение
+            int len = data.size();
+            int err = sendAll(fds[i].fd, data.data(), len);
+
+            if (err < 0) {
+                std::cout << "Error sending data to Socket №" << fds[i].fd << std::endl;
+                std::cout << "Error №" << WSAGetLastError() << std::endl;
             }
+
             handledConnections++;
         }
     }
     return;
 }
-/*
-char x[4]{};
-*(int *)x = data.size();
-int y = *(int *)x;
-*/
+
 void UServer::sendData(const DataBufferStr& data)
 {
     int handledConnections = 1;
@@ -395,24 +417,20 @@ void UServer::sendData(const DataBufferStr& data)
     for (int i = 1; handledConnections < nConnections; i++) {
         if (fds[i].fd != 0) {
 
-            char dataSize[4]{}; //размер пакета, занимает первые 4 байта
-            *(int *)dataSize = data.size();
+            int len = data.size();
+            int err = sendAll(fds[i].fd, data.data(), len);
 
-            int data_len;
-            data_len = send(fds[i].fd, dataSize, 4, 0);
-
-            if (data_len < 0) { //если есть ошибка, то закрываем соединение
-                std::cout << "Error sending data " << WSAGetLastError() << std::endl;
-                // close_conn = true;					//закрываем соединение
+            if (err < 0) {
+                std::cout << "Error sending data to Socket №" << fds[i].fd << std::endl;
+                std::cout << "Error №" << WSAGetLastError() << std::endl;
             }
-
-            data_len += send(fds[i].fd, data.data(), data.size(), 0);
 
             handledConnections++;
         }
     }
     return;
 }
+
 void UServer::setDataHandler(const DataHandler handler)
 {
     dataHandler = handler;
@@ -423,8 +441,8 @@ void UServer::setConnHandler(const ConnHandler handler)
 {
     connHandler = handler;
     return;
-
 }
+
 void UServer::setDisconnHandler(const ConnHandler handler)
 {
     disconnHandler = handler;
@@ -443,7 +461,11 @@ SOCKET UServer::Client::getSocket()
 
 UServer::Client::status UServer::Client::sendData(const DataBuffer& data)
 {
-    int dataLen = send(fd, data.data(), data.size(), 0);
+
+
+    int len = data.size();
+    int dataLen = sendAll(fd, data.data(), len);
+
     if (dataLen == SOCKET_ERROR) {
     _status = status::error_send_data;
     }

@@ -12,6 +12,8 @@
 #include <functional>
 #include <any>
 
+typedef SOCKET Socket;
+
 class UServer
 {
 
@@ -99,6 +101,9 @@ private:
     uint32_t addConnection(const SOCKET newConneection);
     //закрывает и уничтожает массивы соединений fds/clients
     void cleanup();
+    //отправляет len байт из массива data на сокет fd
+    // ! len должен быть меньше либо равен размеру массива data
+    static int sendAll(const Socket fd, const char *data, int& len);
     //максимальное количество соединений (включая сокет listener)
     uint32_t nMaxConnections;
     //Port слушателя (сервера)
