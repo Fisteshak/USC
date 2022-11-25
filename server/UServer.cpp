@@ -366,7 +366,7 @@ uint32_t UServer::addConnection(const SOCKET newConnection)
 
 int UServer::sendAll(const Socket fd, const char *data, int& len)
 {
-    int total = 0;        // сколько байт отправили
+    int total = 0;       // сколько байт отправили
     int bytesleft = len; // сколько байт осталось отправить
     int n;
 
@@ -374,7 +374,7 @@ int UServer::sendAll(const Socket fd, const char *data, int& len)
     char dataLen[4]{};
     *(int *)dataLen = len;
     //отправляем размер
-    n = send(fd, dataLen, bytesleft, 0);
+    n = send(fd, dataLen, 4, 0);
 
     while(total < len) {
         n = send(fd, data+total, bytesleft, 0);
@@ -461,13 +461,11 @@ SOCKET UServer::Client::getSocket()
 
 UServer::Client::status UServer::Client::sendData(const DataBuffer& data)
 {
-
-
     int len = data.size();
     int dataLen = sendAll(fd, data.data(), len);
 
     if (dataLen == SOCKET_ERROR) {
-    _status = status::error_send_data;
+        _status = status::error_send_data;
     }
 
     return _status;
@@ -475,7 +473,9 @@ UServer::Client::status UServer::Client::sendData(const DataBuffer& data)
 
 UServer::Client::status UServer::Client::sendData(const DataBufferStr& data)
 {
-    int dataLen = send(fd, data.data(), data.size(), 0);
+    int len = data.size();
+    int dataLen = sendAll(fd, data.data(), len);
+
     if (dataLen == SOCKET_ERROR) {
         _status = status::error_send_data;
     }

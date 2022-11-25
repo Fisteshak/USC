@@ -52,7 +52,8 @@ public:
     void setConnHandler(const ConnHandler handler);
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
-    //отправить данные всем клиентам
+
+
 
     status sendDataToServer(const DataBuffer& data);
     status sendDataToServer(const DataBufferStr& data);
@@ -68,6 +69,9 @@ private:
     void recvHandlingLoop();
     void joinThreads();
 
+    //
+    int recvAll();
+
     //обработчик получений данных
     DataHandler dataHandler;
     //обработчик принятия нового соединения
@@ -81,4 +85,3 @@ private:
     SOCKET clientSocket;
 
 };
-

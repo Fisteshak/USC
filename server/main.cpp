@@ -88,7 +88,7 @@ void conn_handler(UServer::Client& cl)
 
     std::string s;
     s = "[server] Succesfully connected";
-    cl.sendData(s);
+ //   cl.sendData(s);
     return;
 }
 

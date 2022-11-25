@@ -96,7 +96,7 @@ void UClient::recvHandlingLoop()
         recv(clientSocket, dataLenArr, 4, 0);
 
         int dataLen = *(int *)dataLenArr;
-        std::cout << "Message size is " << dataLen << " bytes.";
+        std::cout << "Message size is " << dataLen << " bytes." << std::endl;
 
         DataBuffer dataBuf(dataLen);
 
@@ -155,6 +155,46 @@ UClient::status UClient::sendDataToServer(const DataBufferStr& data)
         }
     }
     return _status;
+}
+
+int UClient::recvAll(const Socket fd, const char *data, int& len)
+{
+    int total = 0;       // сколько байт отправили
+    int bytesleft = len; // сколько байт осталось отправить
+    int n;
+
+    //упаковываем размер в массив на 4 байта
+    char dataLen[4]{};
+    *(int *)dataLen = len;
+    //отправляем размер
+    n = send(fd, dataLen, 4, 0);
+
+    while(total < len) {
+        n = send(fd, data+total, bytesleft, 0);
+        if (n == -1) { break; }
+        total += n;
+        bytesleft -= n;
+    }
+
+    len = total; // возвратить количество отправленных байт
+
+    return n==-1?-1:0; // вернуть -1 при ошибке, 0 при нормальном завершении
+}
+
+int UClient::recvAll(Socket clientSocket, char *data)
+{
+    int total = 0;       // сколько байт отправили
+    int bytesleft;       // сколько байт осталось отправить
+    int n;
+
+
+    char dataLenArr[4]{};
+    recv(clientSocket, dataLenArr, 4, 0);
+
+    int dataLen = *(int *)dataLenArr;
+    //std::cout << "Message size is " << dataLen << " bytes." << std::endl;
+
+    int messageSize = recv(clientSocket, data,  dataLen, 0);
 }
 
 UClient::status UClient::getStatus()
