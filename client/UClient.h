@@ -10,6 +10,8 @@
 #include <vector>
 #include <functional>
 
+using Socket = SOCKET;
+
 class UClient
 {
 public:
@@ -53,10 +55,11 @@ public:
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
 
+    int recvData(DataBuffer& data);
+    int recvData(DataBufferStr& data);
 
-
-    status sendDataToServer(const DataBuffer& data);
-    status sendDataToServer(const DataBufferStr& data);
+    status sendData(const DataBuffer& data);
+    status sendData(const DataBufferStr& data);
 
     int getLastError();
 
@@ -69,8 +72,10 @@ private:
     void recvHandlingLoop();
     void joinThreads();
 
-    //
-    int recvAll();
+    //получить len байт из массива data на сокет sock
+    // ! len должен быть меньше либо равен размеру массива data
+    //возвращает количество отосланных байт
+    int recvAll(const Socket sock, char* data, const int len);
 
     //обработчик получений данных
     DataHandler dataHandler;

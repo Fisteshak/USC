@@ -39,7 +39,7 @@ int main()
 
     client.connectTo("127.0.0.1", 9554);
 
-    client.sendDataToServer(name);
+    client.sendData(name);
 
     if (client.getStatus() != UClient::status::connected) {
         std::cout << "Failed to connect to a server\n";
@@ -56,7 +56,7 @@ int main()
         if (data == ":stop" || client.getStatus() != UClient::status::connected) {
             break;
         }
-        client.sendDataToServer(data);
+        client.sendData(data);
     }
 
 
