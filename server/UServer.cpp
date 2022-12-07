@@ -388,7 +388,6 @@ int UServer::sendAll(const Socket fd, const char *data, int& len)
     return n==-1?-1:0; // вернуть -1 при ошибке, 0 при нормальном завершении
 }
 
-
 void UServer::sendData(const DataBuffer& data)
 {
     int handledConnections = 1;

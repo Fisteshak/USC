@@ -92,7 +92,8 @@ void UClient::recvHandlingLoop()
     while (_status == status::connected) {
         //получить данные
 
-
+        int messageSize = recvData(dataBuf);
+        std::cout << "Message size is " << messageSize << std::endl;
         if (_status != status::connected) {
             break;
         }
@@ -105,7 +106,9 @@ void UClient::recvHandlingLoop()
         }
         //при закрытии соединения со стороны сервера
         if (messageSize <= 0) {
-            _status = status::disconnected;
+            if (messageSize == 0) _status = status::disconnected;
+            else _status = status::error_recv_data;
+
             //вызвать обработчик
             if (disconnHandler) {
                 disconnHandler();
@@ -156,11 +159,11 @@ int UClient::recvAll(const Socket sock, char* data, const int len) {
         received = recv(sock, data + total, len - total, 0);
         if (received == -1) {
             std::cout << "Error recieving data " << getLastError() << std::endl;
-            break;
+            return -1;
         }
         if (received == 0) {
             // disconnected
-            return -1;
+            return 0;
         }
         total += received;
     }
@@ -170,16 +173,37 @@ int UClient::recvAll(const Socket sock, char* data, const int len) {
 int UClient::recvData(DataBuffer& data)
 {
     char dataLenArr[4]{};
-    //получить 4 байта длины
 
-    if (recvAll(clientSocket, dataLenArr, 4) <= 0)  {
-        _status = status::disconnected;
+    //получить 4 байта длины
+    int recievedData = recvAll(clientSocket, dataLenArr, 4);
+
+    if (recievedData <= 0)  {
+        return recievedData;
     }
 
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    int recievedData = recvAll(clientSocket, data.data(), dataLen);
+    recievedData = recvAll(clientSocket, data.data(), dataLen);
+
+    return recievedData;
+}
+
+int UClient::recvData(DataBufferStr& data)
+{
+    char dataLenArr[4]{};
+
+    //получить 4 байта длины
+    int recievedData = recvAll(clientSocket, dataLenArr, 4);
+
+    if (recievedData <= 0)  {
+        return recievedData;
+    }
+
+    int dataLen = *(int *)dataLenArr;
+    data.resize(dataLen);
+
+    recievedData = recvAll(clientSocket, data.data(), dataLen);
 
     return recievedData;
 }

@@ -17,11 +17,12 @@ class UClient
 public:
     enum status : uint8_t {
         disconnected = 1,
-        connected = 2,
-        paused = 5,
-        error_socket_connect = 3,
-        error_socket_create = 4,
-        error_send_data = 6
+        connected,
+        paused,
+        error_socket_connect,
+        error_socket_create,
+        error_send_data,
+        error_recv_data
     };
 
     UClient();
@@ -55,7 +56,9 @@ public:
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
 
+    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
     int recvData(DataBuffer& data);
+    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
     int recvData(DataBufferStr& data);
 
     status sendData(const DataBuffer& data);
@@ -74,7 +77,7 @@ private:
 
     //получить len байт из массива data на сокет sock
     // ! len должен быть меньше либо равен размеру массива data
-    //возвращает количество отосланных байт
+    //возвращает количество отосланных байт, 0 при отсоединении клиента, -1 или ошибке
     int recvAll(const Socket sock, char* data, const int len);
 
     //обработчик получений данных
