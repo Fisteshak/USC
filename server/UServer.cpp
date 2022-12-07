@@ -246,7 +246,7 @@ void UServer::handlingLoop()
             if (fds[i].revents != 0 && fds[i].fd != 0)       //если есть входящие данные и сокет не пустой
             {
                 int recievedDataLen;		//количество прочитанных байт
-				recievedDataLen = recv(fds[i].fd, data_buf.data(), block_size, 0);  //прочитать
+				recievedDataLen = recvPacket(clients[i], data_buf);
 
                 //если мы успешно прочитали данные
                 if (recievedDataLen > 0) {
@@ -388,6 +388,63 @@ int UServer::sendAll(const Socket fd, const char *data, int& len)
     return n==-1?-1:0; // вернуть -1 при ошибке, 0 при нормальном завершении
 }
 
+int UServer::recvAll(const Socket sock, char* data, const int len) {
+    int total = 0;
+    int received;
+
+    while (total < len) {
+        received = recv(sock, data + total, len - total, 0);
+        if (received == -1) {
+            std::cout << "Error recieving data " << WSAGetLastError() << std::endl;
+            return -1;
+        }
+        if (received == 0) {
+            // disconnected
+            return 0;
+        }
+        total += received;
+    }
+    return total;
+}
+
+int UServer::recvPacket(const UServer::Client sock, DataBuffer& data)
+{
+    char dataLenArr[4]{};
+
+    //получить 4 байта длины
+    int recievedData = recvAll(sock.fd, dataLenArr, 4);
+
+    if (recievedData <= 0)  {
+        return recievedData;
+    }
+
+    int dataLen = *(int *)dataLenArr;
+    data.resize(dataLen);
+
+    recievedData = recvAll(sock.fd, data.data(), dataLen);
+
+    return recievedData;
+}
+
+int UServer::recvPacket(const UServer::Client sock, DataBufferStr& data)
+{
+    char dataLenArr[4]{};
+
+    //получить 4 байта длины
+    int recievedData = recvAll(sock.fd, dataLenArr, 4);
+
+    if (recievedData <= 0)  {
+        return recievedData;
+    }
+
+    int dataLen = *(int *)dataLenArr;
+    data.resize(dataLen);
+
+    recievedData = recvAll(sock.fd, data.data(), dataLen);
+
+    return recievedData;
+}
+
 void UServer::sendData(const DataBuffer& data)
 {
     int handledConnections = 1;
@@ -458,7 +515,7 @@ SOCKET UServer::Client::getSocket()
     return fd;
 }
 
-UServer::Client::status UServer::Client::sendData(const DataBuffer& data)
+UServer::Client::status UServer::Client::sendPacket(const DataBuffer& data)
 {
     int len = data.size();
     int dataLen = sendAll(fd, data.data(), len);
@@ -470,7 +527,7 @@ UServer::Client::status UServer::Client::sendData(const DataBuffer& data)
     return _status;
 }
 
-UServer::Client::status UServer::Client::sendData(const DataBufferStr& data)
+UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
 {
     int len = data.size();
     int dataLen = sendAll(fd, data.data(), len);

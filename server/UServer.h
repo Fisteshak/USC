@@ -69,8 +69,6 @@ public:
     //отправить данные всем клиентам
     void sendData(const DataBuffer& data);
     void sendData(const DataBufferStr& data);
-    //отправить данные выбранному клиенту
-    void sendDataTo(const DataBuffer& data, Client& cl);
     //получить статус
     status getStatus();
     //получить порт
@@ -104,6 +102,16 @@ private:
     //отправляет len байт из массива data на сокет fd
     // ! len должен быть меньше либо равен размеру массива data
     static int sendAll(const Socket fd, const char *data, int& len);
+    //получить len байт из массива data на сокет sock
+    // ! len должен быть меньше либо равен размеру массива data
+    //возвращает количество отосланных байт, 0 при отсоединении клиента, -1 или ошибке
+    int recvAll(const Socket sock, char* data, const int len);
+
+    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
+    int recvPacket(const Client sock, DataBuffer& data);
+    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
+    int recvPacket(const Client sock, DataBufferStr& data);
+
     //максимальное количество соединений (включая сокет listener)
     uint32_t nMaxConnections;
     //Port слушателя (сервера)
@@ -171,8 +179,8 @@ public:
     // client();
 
     ~Client();
-    UServer::Client::status sendData(const DataBuffer& data);
-    UServer::Client::status sendData(const DataBufferStr& data);
+    UServer::Client::status sendPacket(const DataBuffer& data);
+    UServer::Client::status sendPacket(const DataBufferStr& data);
 
     void disconnect();
 private:

@@ -44,7 +44,7 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 
         for (int i = 0; i < nUsers; i++) {
             if (*(users[i].sock) != cl) {
-                users[i].sock->sendData(data2);
+                users[i].sock->sendPacket(data2);
             }
         }
         return;

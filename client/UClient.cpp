@@ -73,6 +73,33 @@ UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
 }
 
 
+int UClient::sendAll(const char *data, const int len)
+{
+    int total = 0;       // сколько байт отправили
+    int bytesleft = len; // сколько байт осталось отправить
+    int n;
+
+    //упаковываем размер в массив на 4 байта
+    char dataLen[4]{};
+    *(int*)dataLen = len;
+    //отправляем размер
+    n = send(clientSocket, dataLen, 4, 0);
+    if (n <= 0) {
+        return n;
+    }
+
+    while (total < len) {
+        n = send(clientSocket, data+total, bytesleft, 0);
+        if (n == -1) { break; }
+        total += n;
+        bytesleft -= n;
+    }
+
+    if (n == -1) return -1;
+    else return total;
+}
+
+
 void UClient::disconnect()
 {
     _status = status::disconnected;
@@ -130,7 +157,8 @@ void UClient::joinThreads()
 UClient::status UClient::sendData(const DataBuffer& data)
 {
     if (_status == status::connected) {
-        int dataLen = send(clientSocket, data.data(), data.size(), 0);
+        int len = data.size();
+        int dataLen = sendAll(data.data(), len);
         if (dataLen < 0) {
             std::cout << "Error sending data " << getLastError() << std::endl;
             _status = status::error_send_data;
@@ -142,7 +170,8 @@ UClient::status UClient::sendData(const DataBuffer& data)
 UClient::status UClient::sendData(const DataBufferStr& data)
 {
     if (_status == status::connected) {
-        int dataLen = send(clientSocket, data.data(), data.size(), 0);
+        int len = data.size();
+        int dataLen = sendAll(data.data(), len);
         if (dataLen < 0) {
             std::cout << "Error sending data " << getLastError() << std::endl;
             _status = status::error_send_data;

@@ -56,10 +56,6 @@ public:
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
 
-    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
-    int recvData(DataBuffer& data);
-    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
-    int recvData(DataBufferStr& data);
 
     status sendData(const DataBuffer& data);
     status sendData(const DataBufferStr& data);
@@ -79,6 +75,14 @@ private:
     // ! len должен быть меньше либо равен размеру массива data
     //возвращает количество отосланных байт, 0 при отсоединении клиента, -1 или ошибке
     int recvAll(const Socket sock, char* data, const int len);
+
+
+    int sendAll(const char* data, const int len);
+
+    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
+    int recvData(DataBuffer& data);
+    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
+    int recvData(DataBufferStr& data);
 
     //обработчик получений данных
     DataHandler dataHandler;
