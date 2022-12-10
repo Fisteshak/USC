@@ -88,7 +88,7 @@ void conn_handler(UServer::Client& cl)
 
     std::string s;
     s = "[server] Succesfully connected";
- //   cl.sendData(s);
+    cl.sendPacket(s);
     return;
 }
 
@@ -113,7 +113,7 @@ int main()
     UServer::DataBufferStr buf;
     do {
 
-        std::getline(std::cin, buf, '\n');
+        std::getline(std::cin, buf);
 
         server.sendData(buf);
 

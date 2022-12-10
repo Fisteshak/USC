@@ -82,21 +82,26 @@ int UClient::sendAll(const char *data, const int len)
     //упаковываем размер в массив на 4 байта
     char dataLen[4]{};
     *(int*)dataLen = len;
+
     //отправляем размер
     n = send(clientSocket, dataLen, 4, 0);
-    if (n <= 0) {
+
+    if (n == SOCKET_ERROR) {
         return n;
     }
 
     while (total < len) {
         n = send(clientSocket, data+total, bytesleft, 0);
-        if (n == -1) { break; }
+        if (n == SOCKET_ERROR) {
+            return n;
+        }
         total += n;
         bytesleft -= n;
     }
 
-    if (n == -1) return -1;
-    else return total;
+
+    return total;
+
 }
 
 
@@ -107,11 +112,11 @@ void UClient::disconnect()
     joinThreads();
 }
 
-void UClient::pause()
-{
-    _status == status::paused;
-    return;
-}
+// void UClient::pause()
+// {
+//     _status == status::paused;
+//     return;
+// }
 
 void UClient::recvHandlingLoop()
 {
@@ -119,8 +124,8 @@ void UClient::recvHandlingLoop()
     while (_status == status::connected) {
         //получить данные
 
-        int messageSize = recvData(dataBuf);
-        std::cout << "Message size is " << messageSize << std::endl;
+        int messageSize = recvPacket(dataBuf);
+        //std::cout << "Message size is " << messageSize << std::endl;
         if (_status != status::connected) {
             break;
         }
@@ -154,41 +159,49 @@ void UClient::joinThreads()
     return;
 }
 
-UClient::status UClient::sendData(const DataBuffer& data)
+UClient::status UClient::sendPacket(const DataBuffer& data)
 {
-    if (_status == status::connected) {
-        int len = data.size();
-        int dataLen = sendAll(data.data(), len);
-        if (dataLen < 0) {
-            std::cout << "Error sending data " << getLastError() << std::endl;
-            _status = status::error_send_data;
-        }
+    if (_status != status::connected or data.size() == 0) {
+        return _status;
     }
+
+    int len = data.size();
+    int dataLen = sendAll(data.data(), len);
+
+    if (dataLen == SOCKET_ERROR) {
+        //std::cout << "Error sending data " << getLastError() << std::endl;
+        _status = status::error_send_data;
+    }
+
     return _status;
 }
 
-UClient::status UClient::sendData(const DataBufferStr& data)
+UClient::status UClient::sendPacket(const DataBufferStr& data)
 {
-    if (_status == status::connected) {
-        int len = data.size();
-        int dataLen = sendAll(data.data(), len);
-        if (dataLen < 0) {
-            std::cout << "Error sending data " << getLastError() << std::endl;
-            _status = status::error_send_data;
-        }
+    if (_status != status::connected or data.size() == 0) {
+        return _status;
     }
+
+    int len = data.size();
+    int dataLen = sendAll(data.data(), len);
+
+    if (dataLen == SOCKET_ERROR) {
+        //std::cout << "Error sending data " << getLastError() << std::endl;
+        _status = status::error_send_data;
+    }
+
     return _status;
 }
 
-int UClient::recvAll(const Socket sock, char* data, const int len) {
+int UClient::recvAll(char* data, const int len) {
     int total = 0;
     int received;
 
     while (total < len) {
-        received = recv(sock, data + total, len - total, 0);
-        if (received == -1) {
-            std::cout << "Error recieving data " << getLastError() << std::endl;
-            return -1;
+        received = recv(clientSocket, data + total, len - total, 0);
+        if (received == SOCKET_ERROR) {
+            //std::cout << "Error recieving data " << getLastError() << std::endl;
+            return SOCKET_ERROR;
         }
         if (received == 0) {
             // disconnected
@@ -199,12 +212,12 @@ int UClient::recvAll(const Socket sock, char* data, const int len) {
     return total;
 }
 
-int UClient::recvData(DataBuffer& data)
+int UClient::recvPacket(DataBuffer& data)
 {
     char dataLenArr[4]{};
 
     //получить 4 байта длины
-    int recievedData = recvAll(clientSocket, dataLenArr, 4);
+    int recievedData = recvAll(dataLenArr, 4);
 
     if (recievedData <= 0)  {
         return recievedData;
@@ -213,17 +226,17 @@ int UClient::recvData(DataBuffer& data)
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll(clientSocket, data.data(), dataLen);
+    recievedData = recvAll(data.data(), dataLen);
 
     return recievedData;
 }
 
-int UClient::recvData(DataBufferStr& data)
+int UClient::recvPacket(DataBufferStr& data)
 {
     char dataLenArr[4]{};
 
     //получить 4 байта длины
-    int recievedData = recvAll(clientSocket, dataLenArr, 4);
+    int recievedData = recvAll(dataLenArr, 4);
 
     if (recievedData <= 0)  {
         return recievedData;
@@ -232,7 +245,7 @@ int UClient::recvData(DataBufferStr& data)
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll(clientSocket, data.data(), dataLen);
+    recievedData = recvAll(data.data(), dataLen);
 
     return recievedData;
 }
@@ -240,17 +253,6 @@ int UClient::recvData(DataBufferStr& data)
 UClient::status UClient::getStatus()
 {
     return _status;
-}
-
-uint32_t UClient::getBlockSize()
-{
-	return blockSize;
-}
-
-void UClient::setBlockSize(const uint32_t size)
-{
-	blockSize = size;
-    return;
 }
 
 void UClient::setDataHandler(const DataHandler handler)

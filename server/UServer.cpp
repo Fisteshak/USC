@@ -35,6 +35,7 @@ UServer::~UServer()
     cleanupWinsock();
     return;
 }
+
 //Инициализирует сетевой интерфейс для сокетов.
 //Возвращает true в случае успеха, false в случае неудачи.
 bool UServer::initWinsock()
@@ -219,6 +220,13 @@ void UServer::handlingLoop()
                         break;
                     }
 
+                    //перевести сокет в блокирующий режим
+                    DWORD Blocking = 0;
+                    if (ioctlsocket(new_conn, FIONBIO, &Blocking) < 0) {
+                        closesocket(new_conn);
+                        break;
+                    }
+
                     //добавить в массив соединений
                     int newConnInd = addConnection(new_conn);
 
@@ -245,19 +253,29 @@ void UServer::handlingLoop()
         for (int i = 1; handledEvents < events_num; i++) {
             if (fds[i].revents != 0 && fds[i].fd != 0)       //если есть входящие данные и сокет не пустой
             {
-                int recievedDataLen;		//количество прочитанных байт
-				recievedDataLen = recvPacket(clients[i], data_buf);
+
+                int packetSize;		//количество прочитанных байт
+				packetSize = recvPacket(clients[i], data_buf);
+
+                // получить 4 байта длины
+                // char dataLenArr[4]{};
+                // int recievedDataLen = recvAll(clients[i].fd, dataLenArr, 4);
+
+                // int dataLen = *(int*)dataLenArr;
+                // data_buf.resize(dataLen);
+                // std::cout << "Message size is " << dataLen << std::endl;
+
+                // recievedDataLen = recvAll(clients[i].fd, data_buf.data(), dataLen);
 
                 //если мы успешно прочитали данные
-                if (recievedDataLen > 0) {
+                if (packetSize > 0) {
                     if (dataHandler) {
                         dataHandler(data_buf, clients[i]);  //вызвать обработчик
                     }
                 }
 
-
                 //при нормальном закрытии соединения
-                if (recievedDataLen == 0) {
+                if (packetSize == 0) {
                     if (disconnHandler) {
                         disconnHandler(clients[i]);
                     }
@@ -267,7 +285,7 @@ void UServer::handlingLoop()
                 //TODO: добавить обработчик ошибок
                 //если recv вернул ошибку
                 //сокет закрываем в любом случае
-                if (recievedDataLen == SOCKET_ERROR) {
+                if (packetSize == SOCKET_ERROR) {
                     //при "жестком" закрытии соединения
 
                     if (WSAGetLastError() == WSAECONNRESET) {
@@ -364,7 +382,7 @@ uint32_t UServer::addConnection(const SOCKET newConnection)
 }
 
 
-int UServer::sendAll(const Socket fd, const char *data, int& len)
+int UServer::sendAll(const Socket fd, const char *data, const int len)
 {
     int total = 0;       // сколько байт отправили
     int bytesleft = len; // сколько байт осталось отправить
@@ -373,19 +391,24 @@ int UServer::sendAll(const Socket fd, const char *data, int& len)
     //упаковываем размер в массив на 4 байта
     char dataLen[4]{};
     *(int *)dataLen = len;
+
     //отправляем размер
     n = send(fd, dataLen, 4, 0);
 
+    if (n == SOCKET_ERROR) {
+        return n;
+    }
+
     while(total < len) {
         n = send(fd, data+total, bytesleft, 0);
-        if (n == -1) { break; }
+        if (n == SOCKET_ERROR) {
+            return n;
+        }
         total += n;
         bytesleft -= n;
     }
 
-    len = total; // возвратить количество отправленных байт
-
-    return n==-1?-1:0; // вернуть -1 при ошибке, 0 при нормальном завершении
+    return total;
 }
 
 int UServer::recvAll(const Socket sock, char* data, const int len) {
@@ -394,9 +417,9 @@ int UServer::recvAll(const Socket sock, char* data, const int len) {
 
     while (total < len) {
         received = recv(sock, data + total, len - total, 0);
-        if (received == -1) {
-            std::cout << "Error recieving data " << WSAGetLastError() << std::endl;
-            return -1;
+        if (received == SOCKET_ERROR) {
+            //std::cout << "Error recieving data " << WSAGetLastError() << std::endl;
+            return SOCKET_ERROR;
         }
         if (received == 0) {
             // disconnected
@@ -404,10 +427,11 @@ int UServer::recvAll(const Socket sock, char* data, const int len) {
         }
         total += received;
     }
+
     return total;
 }
 
-int UServer::recvPacket(const UServer::Client sock, DataBuffer& data)
+int UServer::recvPacket(const UServer::Client& sock, DataBuffer& data)
 {
     char dataLenArr[4]{};
 
@@ -426,7 +450,7 @@ int UServer::recvPacket(const UServer::Client sock, DataBuffer& data)
     return recievedData;
 }
 
-int UServer::recvPacket(const UServer::Client sock, DataBufferStr& data)
+int UServer::recvPacket(const UServer::Client& sock, DataBufferStr& data)
 {
     char dataLenArr[4]{};
 
@@ -517,6 +541,10 @@ SOCKET UServer::Client::getSocket()
 
 UServer::Client::status UServer::Client::sendPacket(const DataBuffer& data)
 {
+    if (_status != status::connected or data.size() == 0) {
+        return _status;
+    }
+
     int len = data.size();
     int dataLen = sendAll(fd, data.data(), len);
 
@@ -529,6 +557,10 @@ UServer::Client::status UServer::Client::sendPacket(const DataBuffer& data)
 
 UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
 {
+    if (_status != status::connected or data.size() == 0) {
+        return _status;
+    }
+
     int len = data.size();
     int dataLen = sendAll(fd, data.data(), len);
 

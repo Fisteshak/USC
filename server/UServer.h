@@ -12,7 +12,9 @@
 #include <functional>
 #include <any>
 
-typedef SOCKET Socket;
+
+using Socket = SOCKET;
+#define SOCKET_ERROR -1
 
 class UServer
 {
@@ -65,7 +67,6 @@ public:
     void setConnHandler(const ConnHandler handler);
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
-    void sendRaw();
     //отправить данные всем клиентам
     void sendData(const DataBuffer& data);
     void sendData(const DataBufferStr& data);
@@ -97,21 +98,26 @@ private:
     //добавить соединение в массив соединенией
     //возвращает номер соединения в массиве fds/clients
     uint32_t addConnection(const SOCKET newConneection);
+
+    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
+    int recvPacket(const Client& sock, DataBuffer& data);
+    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
+    int recvPacket(const Client& sock, DataBufferStr& data);
     //закрывает и уничтожает массивы соединений fds/clients
     void cleanup();
     //отправляет len байт из массива data на сокет fd
     // ! len должен быть меньше либо равен размеру массива data
-    static int sendAll(const Socket fd, const char *data, int& len);
-    //получить len байт из массива data на сокет sock
+    //при ошибке: возвращает SOCKET_ERROR
+    //при успехе: возвращает количество отправленных байт
+    static int sendAll(const Socket fd, const char *data, const int len);
+
+    //получить len байт в массив data из сокета sock
     // ! len должен быть меньше либо равен размеру массива data
-    //возвращает количество отосланных байт, 0 при отсоединении клиента, -1 или ошибке
+    //при отсоединении клиента sock: возвращает 0
+    //при ошибке: возвращает SOCKET_ERROR
+    //при отсоединении: возвращает 0
+    //при успехе: возвращает количество полученных байт
     int recvAll(const Socket sock, char* data, const int len);
-
-    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
-    int recvPacket(const Client sock, DataBuffer& data);
-    //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
-    int recvPacket(const Client sock, DataBufferStr& data);
-
     //максимальное количество соединений (включая сокет listener)
     uint32_t nMaxConnections;
     //Port слушателя (сервера)
@@ -179,7 +185,9 @@ public:
     // client();
 
     ~Client();
+    //отправить пакет данных
     UServer::Client::status sendPacket(const DataBuffer& data);
+    //отправить пакет данных
     UServer::Client::status sendPacket(const DataBufferStr& data);
 
     void disconnect();

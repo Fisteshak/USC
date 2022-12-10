@@ -35,11 +35,11 @@ int main()
     std::cout << "Write your name: " << std::endl;
 
     std::string name;
-    std::cin >> name;
+    std::getline(std::cin, name, '\n');
 
     client.connectTo("127.0.0.1", 9554);
 
-    client.sendData(name);
+    client.sendPacket(name);
 
     if (client.getStatus() != UClient::status::connected) {
         std::cout << "Failed to connect to a server\n";
@@ -56,7 +56,7 @@ int main()
         if (data == ":stop" || client.getStatus() != UClient::status::connected) {
             break;
         }
-        client.sendData(data);
+        client.sendPacket(data);
     }
 
 

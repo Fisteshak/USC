@@ -11,6 +11,7 @@
 #include <functional>
 
 using Socket = SOCKET;
+#define SOCKET_ERROR -1
 
 class UClient
 {
@@ -28,7 +29,7 @@ public:
     UClient();
     ~UClient();
 
-    void pause();
+    //void pause();
 
     //присоединиться к серверу и начать принимать данные
     status connectTo(const std::string& IP, const uint32_t port);
@@ -46,9 +47,6 @@ public:
     //тип обработчика принятия соединения
     using ConnHandler = std::function <void()>;
 
-    //установить размер посылки
-    void setBlockSize(const uint32_t size);
-    uint32_t getBlockSize();
     //установить обработчик получения данных
     void setDataHandler(const DataHandler handler);
     //установить обработчик принятия соединения
@@ -56,9 +54,8 @@ public:
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
 
-
-    status sendData(const DataBuffer& data);
-    status sendData(const DataBufferStr& data);
+    status sendPacket(const DataBuffer& data);
+    status sendPacket(const DataBufferStr& data);
 
     int getLastError();
 
@@ -71,18 +68,24 @@ private:
     void recvHandlingLoop();
     void joinThreads();
 
-    //получить len байт из массива data на сокет sock
+    //отправляет len байт из массива data на сокет fd
     // ! len должен быть меньше либо равен размеру массива data
-    //возвращает количество отосланных байт, 0 при отсоединении клиента, -1 или ошибке
-    int recvAll(const Socket sock, char* data, const int len);
-
-
+    //при ошибке: возвращает SOCKET_ERROR
+    //при успехе: возвращает количество отправленных байт
     int sendAll(const char* data, const int len);
 
+    //получить len байт в массив data
+    // ! len должен быть меньше либо равен размеру массива data
+    //при отсоединении клиента sock: возвращает 0
+    //при ошибке: возвращает SOCKET_ERROR
+    //при отсоединении: возвращает 0
+    //при успехе: возвращает количество полученных байт
+    int recvAll(char* data, const int len);
+
     //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
-    int recvData(DataBuffer& data);
+    int recvPacket(DataBuffer& data);
     //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
-    int recvData(DataBufferStr& data);
+    int recvPacket(DataBufferStr& data);
 
     //обработчик получений данных
     DataHandler dataHandler;
