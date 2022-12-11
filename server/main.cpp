@@ -89,7 +89,7 @@ void conn_handler(UServer::Client& cl)
     std::string s;
     s = "[server] Succesfully connected";
     cl.sendPacket(s);
-    return;
+        return;
 }
 
 
@@ -115,7 +115,7 @@ int main()
 
         std::getline(std::cin, buf);
 
-        server.sendData(buf);
+        server.sendPacket(buf);
 
     } while (buf != ":stop");
     server.stop();

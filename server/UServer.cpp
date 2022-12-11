@@ -1,15 +1,16 @@
-#include "UServer.h"
-
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include "windows.h"
-
 #include <iostream>
 #include <string>
 #include <atomic>
 #include <thread>
 #include <vector>
 #include <any>
+#include <algorithm>
+
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include "windows.h"
+
+#include "UServer.h"
 
 UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
@@ -58,11 +59,11 @@ void UServer::cleanupWinsock()
 }
 
 // создает сокет-слушатель
-SOCKET UServer::createListener()
+Socket UServer::createListener()
 {
 
     //создать сокет
-    SOCKET listener = socket(AF_INET, SOCK_STREAM, 0);
+    Socket listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener == INVALID_SOCKET) return INVALID_SOCKET;
 
     //позволяет системе использовать только что закрытое соединение
@@ -210,7 +211,7 @@ void UServer::handlingLoop()
                 while (true) {
                     if (nConnections == nMaxConnections) break;
 
-                    SOCKET new_conn = accept(listener, NULL, NULL); //принять соединение
+                    Socket new_conn = accept(listener, NULL, NULL); //принять соединение
 
                     if (new_conn == INVALID_SOCKET) { //если accept возвратил INVALID_SOCKET, то все соединения приняты
                         int err = WSAGetLastError();
@@ -229,6 +230,7 @@ void UServer::handlingLoop()
 
                     //добавить в массив соединений
                     int newConnInd = addConnection(new_conn);
+
 
                     if (connHandler) {
                         connHandler(clients[newConnInd]);
@@ -320,7 +322,7 @@ UServer::status UServer::run()
 		return _status = status::error_winsock_init;
 	}
 
-    SOCKET listener = createListener();  //создать сокет-слушатель
+    Socket listener = createListener();  //создать сокет-слушатель
 
     fds[0] = {listener, POLLIN, 0};  //поместить слушателя в начало массива дескрипторов сокетов
 
@@ -359,13 +361,14 @@ void UServer::closeConnection(const uint32_t connectionNum)
     clients[connectionNum].fd = 0;
 
     nConnections--;
+
 }
 
 /*
 добавляет соединение в первую пустую ячейку
 */
 
-uint32_t UServer::addConnection(const SOCKET newConnection)
+uint32_t UServer::addConnection(const Socket newConnection)
 {
     //ищем первую пустую ячейку
     auto firstEmpty = find_if(fds.begin(), fds.end(), [](const pollfd& sock) { return sock.fd == 0; });
@@ -377,6 +380,7 @@ uint32_t UServer::addConnection(const SOCKET newConnection)
 
     clients[firstEmptyInd].fd = fds[firstEmptyInd].fd;
     clients[firstEmptyInd]._status = Client::connected;
+    clients[firstEmptyInd].owner = this;
 
     return firstEmptyInd;
 }
@@ -469,15 +473,14 @@ int UServer::recvPacket(const UServer::Client& sock, DataBufferStr& data)
     return recievedData;
 }
 
-void UServer::sendData(const DataBuffer& data)
+void UServer::sendPacket(const DataBuffer& data)
 {
     int handledConnections = 1;
 
     for (int i = 1; handledConnections < nConnections; i++) {
         if (fds[i].fd != 0) {
 
-            int len = data.size();
-            int err = sendAll(fds[i].fd, data.data(), len);
+            int err = clients[i].sendPacket(data);
 
             if (err < 0) {
                 std::cout << "Error sending data to Socket №" << fds[i].fd << std::endl;
@@ -490,20 +493,19 @@ void UServer::sendData(const DataBuffer& data)
     return;
 }
 
-void UServer::sendData(const DataBufferStr& data)
+void UServer::sendPacket(const DataBufferStr& data)
 {
     int handledConnections = 1;
 
     for (int i = 1; handledConnections < nConnections; i++) {
         if (fds[i].fd != 0) {
 
-            int len = data.size();
-            int err = sendAll(fds[i].fd, data.data(), len);
+            clients[i].sendPacket(data);
 
-            if (err < 0) {
-                std::cout << "Error sending data to Socket №" << fds[i].fd << std::endl;
-                std::cout << "Error №" << WSAGetLastError() << std::endl;
-            }
+            // if (err < 0) {
+            //     std::cout << "Error sending data to Socket №" << fds[i].fd << std::endl;
+            //     std::cout << "Error №" << WSAGetLastError() << std::endl;
+            // }
 
             handledConnections++;
         }
@@ -534,7 +536,7 @@ UServer::Client::status UServer::Client::getStatus()
     return _status;
 }
 
-SOCKET UServer::Client::getSocket()
+Socket UServer::Client::getSocket()
 {
     return fd;
 }
@@ -550,6 +552,13 @@ UServer::Client::status UServer::Client::sendPacket(const DataBuffer& data)
 
     if (dataLen == SOCKET_ERROR) {
         _status = status::error_send_data;
+
+        if (owner->disconnHandler) {
+            owner->disconnHandler(*this);
+        }
+
+        int clientInd = std::find(owner->clients.begin(), owner->clients.end(), *this) - owner->clients.begin();
+        owner->closeConnection(clientInd);
     }
 
     return _status;
@@ -566,6 +575,13 @@ UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
 
     if (dataLen == SOCKET_ERROR) {
         _status = status::error_send_data;
+
+        if (owner->disconnHandler) {
+            owner->disconnHandler(*this);
+        }
+
+        int clientInd = std::find(owner->clients.begin(), owner->clients.end(), *this) - owner->clients.begin();
+        owner->closeConnection(clientInd);
     }
 
     return _status;
@@ -573,7 +589,9 @@ UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
 
 UServer::Client::~Client()
 {
-    closesocket(this->fd);
+    //closesocket(this->fd);
+    int clientInd = std::find(owner->clients.begin(), owner->clients.end(), *this) - owner->clients.begin();
+    owner->closeConnection(clientInd);
 }
 
 /*

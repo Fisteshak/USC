@@ -1,10 +1,10 @@
-#include "UClient.h"
+#include <iostream>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include "windows.h"
 
-#include <iostream>
+#include "UClient.h"
 
 UClient::UClient()
 {
@@ -13,7 +13,7 @@ UClient::UClient()
 
 UClient::~UClient()
 {
-
+    disconnect();
 }
 
 bool UClient::initWinsock()
@@ -107,9 +107,11 @@ int UClient::sendAll(const char *data, const int len)
 
 void UClient::disconnect()
 {
-    _status = status::disconnected;
-    closesocket(clientSocket);
-    joinThreads();
+    if (_status != status::disconnected) {
+        _status = status::disconnected;
+        closesocket(clientSocket);
+        joinThreads();
+    }
 }
 
 // void UClient::pause()
@@ -169,7 +171,7 @@ UClient::status UClient::sendPacket(const DataBuffer& data)
     int dataLen = sendAll(data.data(), len);
 
     if (dataLen == SOCKET_ERROR) {
-        //std::cout << "Error sending data " << getLastError() << std::endl;
+        disconnect();
         _status = status::error_send_data;
     }
 
@@ -186,7 +188,7 @@ UClient::status UClient::sendPacket(const DataBufferStr& data)
     int dataLen = sendAll(data.data(), len);
 
     if (dataLen == SOCKET_ERROR) {
-        //std::cout << "Error sending data " << getLastError() << std::endl;
+        disconnect();
         _status = status::error_send_data;
     }
 

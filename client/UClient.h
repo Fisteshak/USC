@@ -1,17 +1,20 @@
 #pragma once
 
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include "windows.h"
-
 #include <cstdint>
 #include <thread>
 #include <atomic>
 #include <vector>
 #include <functional>
 
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include "windows.h"
+
 using Socket = SOCKET;
-#define SOCKET_ERROR -1
+
+#ifndef SOCKET_ERROR
+    #define SOCKET_ERROR -1
+#endif
 
 class UClient
 {
@@ -97,6 +100,6 @@ private:
     uint32_t blockSize = 1024;
     std::atomic <status> _status = status::disconnected;
     std::thread recvHandlingLoopThread;
-    SOCKET clientSocket;
+    Socket clientSocket;
 
 };

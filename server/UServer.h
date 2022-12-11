@@ -1,20 +1,21 @@
 #pragma once
 
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include "windows.h"
-
 #include <string>
-#include <memory>
 #include <atomic>
 #include <thread>
 #include <vector>
 #include <functional>
 #include <any>
 
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include "windows.h"
 
 using Socket = SOCKET;
-#define SOCKET_ERROR -1
+
+#ifndef SOCKET_ERROR
+    #define SOCKET_ERROR -1
+#endif
 
 class UServer
 {
@@ -68,8 +69,8 @@ public:
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
     //отправить данные всем клиентам
-    void sendData(const DataBuffer& data);
-    void sendData(const DataBufferStr& data);
+    void sendPacket(const DataBuffer& data);
+    void sendPacket(const DataBufferStr& data);
     //получить статус
     status getStatus();
     //получить порт
@@ -88,7 +89,7 @@ private:
     //Возвращает true в случае успеха, false в случае неудачи.
     bool initWinsock();
     // создает сокет-слушатель
-    SOCKET createListener();
+    Socket createListener();
     //закрывает интерфейсы winsock
     void cleanupWinsock();
     //цикл приема данных
@@ -97,7 +98,7 @@ private:
     void closeConnection(const uint32_t connectionNum);
     //добавить соединение в массив соединенией
     //возвращает номер соединения в массиве fds/clients
-    uint32_t addConnection(const SOCKET newConneection);
+    uint32_t addConnection(const Socket newConneection);
 
     //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
     int recvPacket(const Client& sock, DataBuffer& data);
@@ -132,7 +133,7 @@ private:
     //каждый элемент соответствует элементу clients с тем же индексом
 	std::vector <struct pollfd> fds;
     //сокет-слушатель
-    SOCKET listener;
+    Socket listener;
     //размер блока при получении данных
     uint32_t block_size = 1024;
     //обработчик получений данных
@@ -178,8 +179,11 @@ public:
         return *this;
     }
 
+    //сервер, который владеет (управляет) этим клиентом
+    UServer* owner;
+
     status getStatus();
-    SOCKET getSocket();
+    Socket getSocket();
     //пользовательская переменная
     std::any ref;
     // client();
@@ -193,7 +197,7 @@ public:
     void disconnect();
 private:
     //дескриптор сокета
-    SOCKET fd;
+    Socket fd;
     //статус
     Client::status _status = Client::status::disconnected;
 };
