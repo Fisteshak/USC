@@ -10,10 +10,20 @@ add_library(LibUClient STATIC client/UClient.cpp)
 add_executable(server server/main.cpp)
 add_executable(client client/main.cpp)
 
+add_executable(BBE-client BigBrother'sEye/BBE-client.cpp)
+add_executable(BBE-server BigBrother'sEye/BBE-server.cpp)
+
 target_link_libraries(server LibUServer ws2_32)
 target_link_libraries(client LibUClient ws2_32)
+
 target_link_libraries(LibUServer ws2_32)
 target_link_libraries(LibUClient ws2_32)
+
+target_link_libraries(BBE-server LibUServer)
+target_link_libraries(BBE-client LibUClient)
+
+target_include_directories(BBE-server PUBLIC server)
+target_include_directories(BBE-client PUBLIC client)
 
 set (CMAKE_CXX_STANDARD 20)
 
