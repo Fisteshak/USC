@@ -24,6 +24,7 @@ target_link_libraries(BBE-client LibUClient)
 
 target_include_directories(BBE-server PUBLIC server)
 target_include_directories(BBE-client PUBLIC client)
+target_link_libraries(LibUClient wtsapi32)
 
 set (CMAKE_CXX_STANDARD 20)
 
