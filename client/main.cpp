@@ -5,13 +5,11 @@
 
 void data_handler(UClient::DataBuffer& data)
 {
-    // for (int i = 0; data[i] != '\0'; i++) {
+
+    // for (int i = 0; i < data.size(); i++) {
     //     std::cout << data[i];
     // }
-    for (int i = 0; i < data.size(); i++) {
-        std::cout << data[i];
-    }
-    std::cout << std::endl;
+    std::cout << data.data() << std::endl;
 }
 
 void conn_handler()
