@@ -6,25 +6,32 @@
 #include <vector>
 #include <any>
 #include <fstream>
+#include <list>
 
 //#define DEBUG
+
+using namespace std;
 
 UServer server("127.0.0.1", 9554, 50);
 
 struct user{
     std::string name = "";
     UServer::Client* sock;
+    bool operator==(const user &a) {
+        return (a.sock == sock and a.name == name);
+    }
 };
 
+std::list <user> users;
+std::vector <user> users2;
 
-std::vector <user> users;
+
 int nUsers = 0;
 
 
 void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 {
 
-    //user* uref = (user*)cl.ref;
     user* uref = std::any_cast <user*> (cl.ref);
     if (uref->name == "") {
         int i = 0;
@@ -41,11 +48,9 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         data2 += ": ";
         data2 += data.data();
 
-
-        for (int i = 0; i < nUsers; i++) {
-            if (*(users[i].sock) != cl) {
-                users[i].sock->sendPacket(data2);
-            }
+        for (const auto& x : users) {
+            if (*(x.sock) != cl)
+                x.sock->sendPacket(data2);
         }
         return;
     }
@@ -57,41 +62,29 @@ void disconn_handler(UServer::Client& cl)
 
     std::cout << "[server] " << uref->name << " disconnected"  << std::endl;
 
-    for (int i = 0; i < server.nConnections-1 || i < nUsers; i++) {
-        std::cerr << server.clients[i+1].getSocket() << ' ';
-        std::cerr << users[i].name << ' ' << users[i].sock << std::endl;
-    }
-
-
     cl.ref = nullptr;
 
-
-    for (int i = 0; i < nUsers; i++) {
-        if (*(users[i].sock) == cl) {
-            users[i] = users[nUsers-1];
-            users[i].sock->ref = &users[i];
-            break;
-        }
-    }
+    //удаление отсоединившегося
+    auto x = find(users.begin(), users.end(), *uref);
+    users.erase(x);
     nUsers--;
-
 
     return;
 }
 
 void conn_handler(UServer::Client& cl)
 {
-    users[nUsers].name = "";
-    users[nUsers].sock = &cl;
-    cl.ref = &users[nUsers];
+    // users2[nUsers].name = "";
+    // users2[nUsers].sock = &cl;
+    users.push_back({"", &cl});
+    cl.ref = &users.back();
     nUsers++;
 
     std::string s;
     s = "[server] Succesfully connected";
     cl.sendPacket(s);
-        return;
+    return;
 }
-
 
 int main()
 {
@@ -107,7 +100,7 @@ int main()
 
     std::cout << "[server] Server started working" << std::endl;
 
-    users.resize(50);
+    users2.resize(50);
     std::string x;
 
     UServer::DataBufferStr buf;
