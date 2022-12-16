@@ -1,30 +1,18 @@
-#include "UClient.h"
+#include "windows.h"
 #include <fstream>
+#include <stdio.h>
 #include <iostream>
 #include <string>
+#include <vector>
+#include <tchar.h>
 #include <tlhelp32.h>
+#include <psapi.h>
+
+
 using namespace std;
 
-void data_handler(UClient::DataBuffer& data)
+struct process
 {
-
-    // for (int i = 0; i < data.size(); i++) {
-    //     std::cout << data[i];
-    // }
-    std::cout << data.data() << std::endl;
-}
-
-void conn_handler()
-{
-    std::cout << "[client] Succesfully connected to server" << std::endl;
-}
-
-void disconn_handler()
-{
-    std::cout << "[client] Disconnected from server" << std::endl;
-}
-
-struct process {
     string exeName;
     int ID;
 };
@@ -32,11 +20,74 @@ struct process {
 vector<process> processes;
 vector<process> processes2;
 
-int getProcesses(vector<process> &processes)
+void PrintProcessNameAndID(DWORD processID)
+{
+    TCHAR szProcessName[MAX_PATH] = TEXT("<unknown>");
+
+    // Get a handle to the process.
+
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION |
+                                      PROCESS_VM_READ | PROCESS_QUERY_LIMITED_INFORMATION,
+                                  FALSE, processID);
+
+    // Get the process name.
+    PROCESS_MEMORY_COUNTERS_EX pmc;
+
+    if (NULL != hProcess)
+    {
+        HMODULE hMod;
+        DWORD cbNeeded;
+
+        if (EnumProcessModulesEx(hProcess, &hMod, sizeof(hMod),
+                               &cbNeeded, 3))
+        {
+            GetModuleBaseName(hProcess, hMod, szProcessName,
+                              sizeof(szProcessName) / sizeof(TCHAR));
+            GetProcessMemoryInfo(hProcess, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+
+        }
+    }
+
+    // Print the process name and identifier.
+
+
+    _tprintf(TEXT("%s  (PID: %u)  %u\n"), szProcessName, processID, pmc.WorkingSetSize / 1024);
+
+    // Release the handle to the process.
+
+    CloseHandle(hProcess);
+}
+
+void getProcessesPSAPI()
+{
+    DWORD aProcesses[1024], cbNeeded, cProcesses;
+    unsigned int i;
+
+    if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded))
+    {
+        return;
+    }
+
+    // Calculate how many process identifiers were returned.
+
+    cProcesses = cbNeeded / sizeof(DWORD);
+
+    // Print the name and process identifier for each process.
+
+    for (i = 0; i < cProcesses; i++)
+    {
+        if (aProcesses[i] != 0)
+        {
+            PrintProcessNameAndID(aProcesses[i]);
+        }
+    }
+}
+
+int getProcesses(/*vector<process> &processes*/)
 {
     HANDLE hProcessSnap;
     PROCESSENTRY32 pe32;
-    //сделать снимок системы
+    // сделать снимок системы
     hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hProcessSnap == INVALID_HANDLE_VALUE)
         return -1;
@@ -45,27 +96,28 @@ int getProcesses(vector<process> &processes)
 
     process empty;
 
-    //получить первый процесс
-    if( !Process32First( hProcessSnap, &pe32 ) )
+    // получить первый процесс
+    if (!Process32First(hProcessSnap, &pe32))
     {
         cout << "Process32First Error" << endl;
-        CloseHandle( hProcessSnap );          // clean the snapshot object
+        CloseHandle(hProcessSnap); // clean the snapshot object
         return -1;
     }
     int i = 0;
     int size = 0;
-    do  {
-        // printf("pe32.th32ProcessID= %d\n", pe32.th32ProcessID);
-        // printf("pe32.th32ParentProcessID= %d\n", pe32.th32ParentProcessID);
-        // printf("pe32.szExeFile= %s\n\n", pe32.szExeFile);
+    do
+    {
+        printf("pe32.th32ProcessID= %d\n", pe32.th32ProcessID);
+        printf("pe32.th32ParentProcessID= %d\n", pe32.th32ParentProcessID);
+        printf("pe32.szExeFile= %s\n\n", pe32.szExeFile);
 
-        if (processes.size() <= i) {
-            processes.push_back(empty);
-        }
-        processes[i].exeName = pe32.szExeFile;
-        processes[i].ID = pe32.th32ProcessID;
-        size += processes[i].exeName.size() + 4;
-        i++;
+        // if (processes.size() <= i) {
+        //     processes.push_back(empty);
+        // }
+        // processes[i].exeName = pe32.szExeFile;
+        // processes[i].ID = pe32.th32ProcessID;
+        // size += processes[i].exeName.size() + 4;
+        // i++;
     } while (Process32Next(hProcessSnap, &pe32));
 
     CloseHandle(hProcessSnap);
@@ -74,48 +126,7 @@ int getProcesses(vector<process> &processes)
 
 int main()
 {
-    //setlocale(LC_ALL, ".866");
-    UClient client;
-    client.setDataHandler(data_handler);
-    client.setDisconnHandler(disconn_handler);
-    client.setConnHandler(conn_handler);
-
-    // std::cout << "Write your name: " << std::endl;
-
     std::string name;
-    // std::getline(std::cin, name, '\n');
 
-    // client.connectTo("127.0.0.1", 9554);
-
-    // client.sendPacket(name);
-
-    // if (client.getStatus() != UClient::status::connected) {
-    //     std::cout << "Failed to connect to a server\n";
-    //     return 0;
-    // }
-
-    UClient::DataBufferStr data;
-    int size = getProcesses(processes);
-    data.resize(size);
-    memcpy(data.data(), processes.data(), size);
-    processes2.resize(processes.size());
-    memcpy(processes2.data(), data.data(), size);
-
-    for (const auto &x : processes2) {
-        cout << x.exeName << "    " << x.ID << '\n';
-    }
-
-
-
-    // while (true) {
-
-    //     std::getline(std::cin, data, '\n');
-
-    //     if (data == ":stop" || client.getStatus() != UClient::status::connected) {
-    //         break;
-    //     }
-    //     client.sendPacket(data);
-    // }
-
-    //client.disconnect();
+    getProcessesPSAPI();
 }
