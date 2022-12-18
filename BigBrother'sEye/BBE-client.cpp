@@ -7,10 +7,12 @@
 #include <tchar.h>
 #include <tlhelp32.h>
 #include <vector>
+#include <cassert>
 
 using namespace std;
 
-struct process {
+struct process
+{
     string exeName;
     uint32_t ID;
     uint64_t memoryUsage;
@@ -26,20 +28,22 @@ process getProcessInfo(const DWORD processID)
     // Get a handle to the process.
 
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_QUERY_LIMITED_INFORMATION,
-        FALSE, processID);
+                                  FALSE, processID);
 
     // Get the process name.
     PROCESS_MEMORY_COUNTERS_EX pmc;
 
-    if (NULL != hProcess) {
+    if (NULL != hProcess)
+    {
         HMODULE hMod;
         DWORD cbNeeded;
 
         if (EnumProcessModulesEx(hProcess, &hMod, sizeof(hMod),
-                &cbNeeded, 3)) {
+                                 &cbNeeded, 3))
+        {
             GetModuleBaseName(hProcess, hMod, szProcessName,
-                sizeof(szProcessName) / sizeof(TCHAR));
-            GetProcessMemoryInfo(hProcess, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+                              sizeof(szProcessName) / sizeof(TCHAR));
+            GetProcessMemoryInfo(hProcess, (PROCESS_MEMORY_COUNTERS *)&pmc, sizeof(pmc));
         }
     }
 
@@ -50,15 +54,16 @@ process getProcessInfo(const DWORD processID)
     // Release the handle to the process.
 
     CloseHandle(hProcess);
-    return { szProcessName, processID, pmc.WorkingSetSize };
+    return {szProcessName, processID, pmc.WorkingSetSize};
 }
 
-void getProcessesPSAPI(vector<process>& processes)
+void getProcessesPSAPI(vector<process> &processes)
 {
     DWORD aProcesses[1024], cbNeeded, cProcesses;
     unsigned int i;
 
-    if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded)) {
+    if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded))
+    {
         return;
     }
 
@@ -69,15 +74,16 @@ void getProcessesPSAPI(vector<process>& processes)
 
     // Print the name and process identifier for each process.
 
-    for (i = 0; i < cProcesses; i++) {
-        if (aProcesses[i] != 0) {
+    for (i = 0; i < cProcesses; i++)
+    {
+        if (aProcesses[i] != 0)
+        {
             processes[i] = getProcessInfo(aProcesses[i]);
         }
     }
 }
 
-
-//возвращает полный размер вектора с процессами
+// возвращает полный размер вектора с процессами
 int32_t getProcesses(vector<process> &processes)
 {
     HANDLE hProcessSnap;
@@ -92,7 +98,8 @@ int32_t getProcesses(vector<process> &processes)
     pe32.dwSize = sizeof(PROCESSENTRY32);
 
     // получить первый процесс
-    if (!Process32First(hProcessSnap, &pe32)) {
+    if (!Process32First(hProcessSnap, &pe32))
+    {
         cout << "Process32First Error" << endl;
         CloseHandle(hProcessSnap); // clean the snapshot object
         return -1;
@@ -102,9 +109,11 @@ int32_t getProcesses(vector<process> &processes)
     long long size = 0;
     process empty;
 
-    //перебрать процессы
-    do {
-        if (processes.size() <= i) {
+    // перебрать процессы
+    do
+    {
+        if (processes.size() <= i)
+        {
             processes.push_back(empty);
         }
 
@@ -112,17 +121,20 @@ int32_t getProcesses(vector<process> &processes)
         processes[i].ID = pe32.th32ProcessID;
 
         HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
-            FALSE, pe32.th32ProcessID);
+                                      FALSE, pe32.th32ProcessID);
 
-        if (hProcess == NULL) {
+        if (hProcess == NULL)
+        {
             processes[i].memoryUsage = 0;
         }
-        else {
-            GetProcessMemoryInfo(hProcess, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+        else
+        {
+            GetProcessMemoryInfo(hProcess, (PROCESS_MEMORY_COUNTERS *)&pmc, sizeof(pmc));
             processes[i].memoryUsage = pmc.PrivateUsage;
         }
 
-        size += processes[i].exeName.size() + 4 + 8; //имя + ID + память
+        // имя + '\0' для разделения + ID + память
+        size += processes[i].exeName.size() + 1 + 4 + 8;
 
         i++;
 
@@ -135,11 +147,64 @@ int32_t getProcesses(vector<process> &processes)
     return size;
 }
 
+void processesToBytes(const vector<process> &processes, uint32_t size, vector<char> &data)
+{
+    data.resize(size + 4, '\0');
+    // количество процессов
+    uint32_t procNum = processes.size();
+    memcpy(data.data(), &procNum, sizeof(procNum));
+    int j = sizeof(procNum);
+
+    // to bytes
+    for (int i = 0; i < processes.size(); i++)
+    {
+        processes[i].exeName.copy(data.data() + j, processes[i].exeName.size(), 0);
+
+        j += processes[i].exeName.size() + 1;
+        data[j] = '\0';
+
+        memcpy(data.data() + j, &processes[i].ID, sizeof(processes[i].ID));
+        j += sizeof(processes[i].ID);
+
+        memcpy(data.data() + j, &processes[i].memoryUsage, sizeof(processes[i].memoryUsage));
+        j += sizeof(processes[i].memoryUsage);
+    }
+    return;
+}
+
 int main()
 {
 
-    getProcesses(processes);
-    for (const auto &x : processes) {
-        cout << x.ID << "   " << x.exeName << "   " << x.memoryUsage << endl;
+    uint32_t size = getProcesses(processes);
+
+    vector<char> buf;
+
+    processesToBytes(processes, size, buf);
+    // from bytes
+
+    uint32_t procNum = 0;
+
+    memcpy(&procNum, buf.data(), sizeof(procNum));
+    int j = sizeof(procNum);
+
+    processes2.resize(procNum);
+    for (int i = 0; i < procNum; i++)
+    {
+        processes2[i].exeName = (string)(buf.data() + j);
+        j += processes2[i].exeName.size() + 1;
+
+        memcpy(&processes2[i].ID, buf.data() + j, sizeof(processes[i].ID));
+        j += sizeof(processes2[i].ID);
+
+        memcpy(&processes2[i].memoryUsage, buf.data() + j, sizeof(processes[i].memoryUsage));
+        j += sizeof(processes2[i].memoryUsage);
+    }
+
+    assert(processes.size() == processes2.size());
+    for (int i = 0; i < processes.size(); i++)
+    {
+        assert(processes[i].exeName == processes2[i].exeName);
+        assert(processes[i].ID == processes2[i].ID);
+        assert(processes[i].memoryUsage == processes2[i].memoryUsage);
     }
 }
