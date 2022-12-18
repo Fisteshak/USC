@@ -147,6 +147,29 @@ int32_t getProcesses(vector<process> &processes)
     return size;
 }
 
+
+void bytesToProcesses(vector<process> &processes, const vector<char> &data)
+{
+    uint32_t procNum = 0;
+    memcpy(&procNum, data.data(), sizeof(procNum));
+    int j = sizeof(procNum);
+
+    processes2.resize(procNum);
+    for (int i = 0; i < procNum; i++)
+    {
+        processes2[i].exeName = (string)(data.data() + j);
+        j += processes2[i].exeName.size() + 1;
+
+        memcpy(&processes2[i].ID, data.data() + j, sizeof(processes[i].ID));
+        j += sizeof(processes2[i].ID);
+
+        memcpy(&processes2[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
+        j += sizeof(processes2[i].memoryUsage);
+    }
+    return;
+
+}
+
 void processesToBytes(const vector<process> &processes, uint32_t size, vector<char> &data)
 {
     data.resize(size + 4, '\0');
@@ -182,23 +205,8 @@ int main()
     processesToBytes(processes, size, buf);
     // from bytes
 
-    uint32_t procNum = 0;
+    bytesToProcesses(processes, buf);
 
-    memcpy(&procNum, buf.data(), sizeof(procNum));
-    int j = sizeof(procNum);
-
-    processes2.resize(procNum);
-    for (int i = 0; i < procNum; i++)
-    {
-        processes2[i].exeName = (string)(buf.data() + j);
-        j += processes2[i].exeName.size() + 1;
-
-        memcpy(&processes2[i].ID, buf.data() + j, sizeof(processes[i].ID));
-        j += sizeof(processes2[i].ID);
-
-        memcpy(&processes2[i].memoryUsage, buf.data() + j, sizeof(processes[i].memoryUsage));
-        j += sizeof(processes2[i].memoryUsage);
-    }
 
     assert(processes.size() == processes2.size());
     for (int i = 0; i < processes.size(); i++)
