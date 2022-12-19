@@ -137,7 +137,7 @@ int32_t getProcesses(vector<process> &processes)
         }
 
         // имя + '\0' для разделения + ID + память
-        size += processes[i].exeName.size() + 1 + 4 + 8;
+        size += processes[i].exeName.size() + 1 + sizeof(processes[i].ID) + sizeof(processes[i].memoryUsage);
 
         i++;
 

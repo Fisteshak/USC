@@ -9,6 +9,8 @@
 
 //#define DEBUG
 
+using namespace std;
+
 UServer server("127.0.0.1", 9554, 50);
 
 struct user{
@@ -16,10 +18,40 @@ struct user{
     UServer::Client* sock;
 };
 
-
 std::vector <user> users;
 int nUsers = 0;
 
+struct process
+{
+    string exeName;
+    uint32_t ID;
+    uint64_t memoryUsage;
+};
+
+
+void bytesToProcesses(vector<process> &processes, const vector<char> &data)
+{
+    uint32_t procNum = 0;
+    memcpy(&procNum, data.data(), sizeof(procNum));
+    int j = sizeof(procNum);
+
+    processes.resize(procNum);
+    for (int i = 0; i < procNum; i++)
+    {
+        processes[i].exeName = (string)(data.data() + j);
+        j += processes[i].exeName.size() + 1;
+
+        memcpy(&processes[i].ID, data.data() + j, sizeof(processes[i].ID));
+        j += sizeof(processes[i].ID);
+
+        memcpy(&processes[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
+        j += sizeof(processes[i].memoryUsage);
+    }
+    return;
+
+}
+
+vector <process> processes;
 
 void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 {
@@ -35,20 +67,24 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         std::cout << "[server] " << uref->name << " connected\n";
     }
     else {
-
-        std::cout << uref->name << ": " << data.data() << std::endl;
-        UServer::DataBufferStr data2 = uref->name;
-        data2 += ": ";
-        data2 += data.data();
-
-
-        for (int i = 0; i < nUsers; i++) {
-            if (*(users[i].sock) != cl) {
-                users[i].sock->sendPacket(data2);
-            }
+        processes.clear();
+        bytesToProcesses(processes, data);
+        for (const auto &x : processes) {
+            std::cout << x.ID << "  " << x.exeName << "   " << x.memoryUsage << std::endl;
         }
-        return;
+
+        // std::cout << uref->name << ": " << data.data() << std::endl;
+        // UServer::DataBufferStr data2 = uref->name;
+        // data2 += ": ";
+        // data2 += data.data();
+
+        // for (int i = 0; i < nUsers; i++) {
+        //     if (*(users[i].sock) != cl) {
+        //         users[i].sock->sendPacket(data2);
+        //     }
+        // }
     }
+    return;
 }
 
 void disconn_handler(UServer::Client& cl)
