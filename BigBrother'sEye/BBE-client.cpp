@@ -1,13 +1,17 @@
-#include "windows.h"
+#include "UClient.h"
 #include <fstream>
 #include <iostream>
-#include <psapi.h>
 #include <stdio.h>
 #include <string>
 #include <tchar.h>
-#include <tlhelp32.h>
 #include <vector>
 #include <cassert>
+#include <chrono>
+
+#include "windows.h"
+#include <psapi.h>
+#include <tlhelp32.h>
+
 
 using namespace std;
 
@@ -19,7 +23,6 @@ struct process
 };
 
 vector<process> processes;
-vector<process> processes2;
 
 process getProcessInfo(const DWORD processID)
 {
@@ -154,17 +157,17 @@ void bytesToProcesses(vector<process> &processes, const vector<char> &data)
     memcpy(&procNum, data.data(), sizeof(procNum));
     int j = sizeof(procNum);
 
-    processes2.resize(procNum);
+    processes.resize(procNum);
     for (int i = 0; i < procNum; i++)
     {
-        processes2[i].exeName = (string)(data.data() + j);
-        j += processes2[i].exeName.size() + 1;
+        processes[i].exeName = (string)(data.data() + j);
+        j += processes[i].exeName.size() + 1;
 
-        memcpy(&processes2[i].ID, data.data() + j, sizeof(processes[i].ID));
-        j += sizeof(processes2[i].ID);
+        memcpy(&processes[i].ID, data.data() + j, sizeof(processes[i].ID));
+        j += sizeof(processes[i].ID);
 
-        memcpy(&processes2[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
-        j += sizeof(processes2[i].memoryUsage);
+        memcpy(&processes[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
+        j += sizeof(processes[i].memoryUsage);
     }
     return;
 
@@ -183,36 +186,88 @@ void processesToBytes(const vector<process> &processes, uint32_t size, vector<ch
     {
         processes[i].exeName.copy(data.data() + j, processes[i].exeName.size(), 0);
 
-        j += processes[i].exeName.size() + 1;
+        j += processes[i].exeName.size();
         data[j] = '\0';
+        j++;
 
         memcpy(data.data() + j, &processes[i].ID, sizeof(processes[i].ID));
         j += sizeof(processes[i].ID);
 
         memcpy(data.data() + j, &processes[i].memoryUsage, sizeof(processes[i].memoryUsage));
         j += sizeof(processes[i].memoryUsage);
+
     }
     return;
+}
+
+void data_handler(UClient::DataBuffer& data)
+{
+
+    // for (int i = 0; i < data.size(); i++) {
+    //     std::cout << data[i];
+    // }
+    std::cout << data.data() << std::endl;
+}
+
+void conn_handler()
+{
+    std::cout << "[client] Succesfully connected to server" << std::endl;
+}
+
+void disconn_handler()
+{
+    std::cout << "[client] Disconnected from server" << std::endl;
 }
 
 int main()
 {
 
-    uint32_t size = getProcesses(processes);
+    UClient client;
 
-    vector<char> buf;
-
-    processesToBytes(processes, size, buf);
-    // from bytes
-
-    bytesToProcesses(processes, buf);
+    client.setDataHandler(data_handler);
+    client.setDisconnHandler(disconn_handler);
+    client.setConnHandler(conn_handler);
 
 
-    assert(processes.size() == processes2.size());
-    for (int i = 0; i < processes.size(); i++)
-    {
-        assert(processes[i].exeName == processes2[i].exeName);
-        assert(processes[i].ID == processes2[i].ID);
-        assert(processes[i].memoryUsage == processes2[i].memoryUsage);
+    UClient::DataBuffer buf;
+
+
+    client.connectTo("127.0.0.1", 9554);
+
+    if (client.getStatus() != UClient::status::connected) {
+        std::cout << "Failed to connect to a server\n";
+        return 0;
     }
+
+    string name = "task manager";
+    client.sendPacket(name);
+
+    uint32_t size;
+    while (true) {
+        processes.clear();
+        size = getProcesses(processes);
+        processesToBytes(processes, size, buf);
+        processes.clear();
+        bytesToProcesses(processes, buf);
+        client.sendPacket(buf);
+
+        for (const auto &x : processes) {
+            std::cout << x.ID << "  " << x.exeName << "   " << x.memoryUsage << std::endl;
+        }
+
+        this_thread::sleep_for(5s);
+    }
+
+
+
+//    bytesToProcesses(processes, buf);
+
+
+    // assert(processes.size() == processes2.size());
+    // for (int i = 0; i < processes.size(); i++)
+    // {
+    //     assert(processes[i].exeName == processes2[i].exeName);
+    //     assert(processes[i].ID == processes2[i].ID);
+    //     assert(processes[i].memoryUsage == processes2[i].memoryUsage);
+    // }
 }
