@@ -22,6 +22,11 @@ struct process
     uint64_t memoryUsage;
 };
 
+struct SystemResInfo {
+    vector <process> prcs;
+    uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;
+};
+
 vector<process> processes;
 
 process getProcessInfo(const DWORD processID)
@@ -150,6 +155,28 @@ int32_t getProcesses(vector<process> &processes)
     return size;
 }
 
+//.first - текущее использование, .second - всего, возвращает в КБ
+pair<uint64_t, uint64_t> getVirtualMemInfo()
+{
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    DWORDLONG totalVirtualMem = memInfo.ullTotalPageFile;
+    DWORDLONG virtualMemUsed = memInfo.ullTotalPageFile - memInfo.ullAvailPageFile;
+    return {virtualMemUsed / 1024, totalVirtualMem / 1024};
+}
+
+//.first - текущее использование, .second - всего, возвращает в КБ
+pair<uint64_t, uint64_t> getPhysicalMemInfo()
+{
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    DWORDLONG totalPhysMem = memInfo.ullTotalPhys;
+    DWORDLONG physMemUsed = memInfo.ullTotalPhys - memInfo.ullAvailPhys;
+    return {physMemUsed / 1024, totalPhysMem / 1024};
+}
+
 
 void bytesToProcesses(vector<process> &processes, const vector<char> &data)
 {
@@ -219,6 +246,9 @@ void disconn_handler()
     std::cout << "[client] Disconnected from server" << std::endl;
 }
 
+
+
+
 int main()
 {
 
@@ -243,12 +273,12 @@ int main()
     client.sendPacket(name);
 
     uint32_t size;
+    SystemResInfo resInfo;
     while (true) {
-        processes.clear();
-        size = getProcesses(processes);
-        processesToBytes(processes, size, buf);
-        processes.clear();
-        bytesToProcesses(processes, buf);
+        resInfo.prcs.clear();
+        size = getProcesses(resInfo.prcs);
+
+        processesToBytes(resInfo.prcs, size, buf);
         client.sendPacket(buf);
 
         for (const auto &x : processes) {
