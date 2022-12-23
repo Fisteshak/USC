@@ -1,5 +1,6 @@
 #include "UServer.h"
 
+#include <iomanip>
 #include <memory>
 #include <thread>
 #include <iostream>
@@ -28,12 +29,17 @@ struct process
     uint64_t memoryUsage;
 };
 
+struct SystemResInfo {
+    vector <process> procs;
+    uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;
+};
 
-void bytesToProcesses(vector<process> &processes, const vector<char> &data)
+//j - порядковый норер байта, куда начнется запись байт
+void bytesToProcesses(vector<process> &processes, const vector<char> &data, uint32_t &j)
 {
     uint32_t procNum = 0;
     memcpy(&procNum, data.data(), sizeof(procNum));
-    int j = sizeof(procNum);
+    j += sizeof(procNum);
 
     processes.resize(procNum);
     for (int i = 0; i < procNum; i++)
@@ -51,7 +57,26 @@ void bytesToProcesses(vector<process> &processes, const vector<char> &data)
 
 }
 
+//j - порядковый норер байта, куда начнется запись байт
+void bytesToResInfo(SystemResInfo& resInfo, const vector <char>& data, uint32_t& j)
+{
+    bytesToProcesses(resInfo.procs, data, j);
+
+    memcpy(&resInfo.usedVirtualMem, data.data() + j, sizeof(resInfo.usedVirtualMem));
+    j += sizeof(resInfo.usedVirtualMem);
+    memcpy(&resInfo.totalVirtualMem, data.data() + j, sizeof(resInfo.totalVirtualMem));
+    j += sizeof(resInfo.totalVirtualMem);
+    memcpy(&resInfo.usedPhysMem, data.data() + j, sizeof(resInfo.usedPhysMem));
+    j += sizeof(resInfo.usedPhysMem);
+    memcpy(&resInfo.totalPhysMem, data.data() + j, sizeof(resInfo.totalPhysMem));
+    j += sizeof(resInfo.totalPhysMem);
+
+}
+
+
+
 vector <process> processes;
+SystemResInfo resInfo;
 
 void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 {
@@ -68,21 +93,19 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
     }
     else {
         processes.clear();
-        bytesToProcesses(processes, data);
-        for (const auto &x : processes) {
+        uint32_t j = 0;
+        bytesToResInfo(resInfo, data, j);
+        for (const auto &x : resInfo.procs) {
             std::cout << x.ID << "  " << x.exeName << "   " << x.memoryUsage << std::endl;
         }
 
-        // std::cout << uref->name << ": " << data.data() << std::endl;
-        // UServer::DataBufferStr data2 = uref->name;
-        // data2 += ": ";
-        // data2 += data.data();
+        cout << setprecision(3);
+        cout << "Physical memory used: " << double(resInfo.usedPhysMem) / (1024 * 1024)
+        << " / " << double(resInfo.totalPhysMem) / (1024 * 1024)  << "GB" << endl;
 
-        // for (int i = 0; i < nUsers; i++) {
-        //     if (*(users[i].sock) != cl) {
-        //         users[i].sock->sendPacket(data2);
-        //     }
-        // }
+        cout << "Virtual memory used: " << double(resInfo.usedVirtualMem) / (1024 * 1024)
+        << " / " << double(resInfo.totalVirtualMem) / (1024 * 1024) << "GB" << endl;
+
     }
     return;
 }
@@ -125,7 +148,7 @@ void conn_handler(UServer::Client& cl)
     std::string s;
     s = "[server] Succesfully connected";
     cl.sendPacket(s);
-        return;
+    return;
 }
 
 

@@ -7,6 +7,8 @@
 #include <vector>
 #include <cassert>
 #include <chrono>
+#include <iomanip>
+
 
 #include "windows.h"
 #include <psapi.h>
@@ -23,7 +25,7 @@ struct process
 };
 
 struct SystemResInfo {
-    vector <process> prcs;
+    vector <process> procs;
     uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;
 };
 
@@ -155,28 +157,41 @@ int32_t getProcesses(vector<process> &processes)
     return size;
 }
 
-//.first - текущее использование, .second - всего, возвращает в КБ
-pair<uint64_t, uint64_t> getVirtualMemInfo()
+//возвращает в КБ
+uint64_t getTotalPhysMem()
 {
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
-    DWORDLONG totalVirtualMem = memInfo.ullTotalPageFile;
-    DWORDLONG virtualMemUsed = memInfo.ullTotalPageFile - memInfo.ullAvailPageFile;
-    return {virtualMemUsed / 1024, totalVirtualMem / 1024};
+    return memInfo.ullTotalPhys / 1024;
 }
 
-//.first - текущее использование, .second - всего, возвращает в КБ
-pair<uint64_t, uint64_t> getPhysicalMemInfo()
+//возвращает в КБ
+uint64_t getUsedPhysMem()
 {
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
-    DWORDLONG totalPhysMem = memInfo.ullTotalPhys;
-    DWORDLONG physMemUsed = memInfo.ullTotalPhys - memInfo.ullAvailPhys;
-    return {physMemUsed / 1024, totalPhysMem / 1024};
+    return (memInfo.ullTotalPhys - memInfo.ullAvailPhys) / 1024;
 }
 
+//возвращает в КБ
+uint64_t getTotalVirtMem()
+{
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    return memInfo.ullTotalPageFile / 1024;
+}
+
+//возвращает в КБ
+uint64_t getUsedVirtMem()
+{
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    return (memInfo.ullTotalPageFile - memInfo.ullAvailPageFile) / 1024;
+}
 
 void bytesToProcesses(vector<process> &processes, const vector<char> &data)
 {
@@ -227,6 +242,27 @@ void processesToBytes(const vector<process> &processes, uint32_t size, vector<ch
     return;
 }
 
+//prSize - размер массива процессов
+void resInfoToBytes(const SystemResInfo& resInfo, const uint32_t prSize, vector <char>& data)
+{
+    processesToBytes(resInfo.procs, prSize, data);
+
+    int j = data.size();
+    data.resize(data.size() + sizeof(resInfo.usedVirtualMem) + sizeof(resInfo.totalVirtualMem)
+        + sizeof(resInfo.usedPhysMem) + sizeof(resInfo.totalPhysMem));
+
+    memcpy(data.data() + j, &resInfo.usedVirtualMem, sizeof(resInfo.usedVirtualMem));
+    j += sizeof(resInfo.usedVirtualMem);
+    memcpy(data.data() + j, &resInfo.totalVirtualMem, sizeof(resInfo.totalVirtualMem));
+    j += sizeof(resInfo.totalVirtualMem);
+    memcpy(data.data() + j, &resInfo.usedPhysMem, sizeof(resInfo.usedPhysMem));
+    j += sizeof(resInfo.usedPhysMem);
+    memcpy(data.data() + j, &resInfo.totalPhysMem, sizeof(resInfo.totalPhysMem));
+    j += sizeof(resInfo.totalPhysMem);
+
+    return;
+}
+
 void data_handler(UClient::DataBuffer& data)
 {
 
@@ -247,8 +283,6 @@ void disconn_handler()
 }
 
 
-
-
 int main()
 {
 
@@ -258,9 +292,7 @@ int main()
     client.setDisconnHandler(disconn_handler);
     client.setConnHandler(conn_handler);
 
-
     UClient::DataBuffer buf;
-
 
     client.connectTo("127.0.0.1", 9554);
 
@@ -275,15 +307,27 @@ int main()
     uint32_t size;
     SystemResInfo resInfo;
     while (true) {
-        resInfo.prcs.clear();
-        size = getProcesses(resInfo.prcs);
+        resInfo.procs.clear();
+        size = getProcesses(resInfo.procs);
 
-        processesToBytes(resInfo.prcs, size, buf);
+        resInfo.usedPhysMem = getUsedPhysMem();
+        resInfo.totalPhysMem = getTotalPhysMem();
+        resInfo.usedVirtualMem = getUsedVirtMem();
+        resInfo.totalVirtualMem = getTotalVirtMem();
+
+        resInfoToBytes(resInfo, size, buf);
+
         client.sendPacket(buf);
 
-        for (const auto &x : processes) {
+        for (const auto &x : resInfo.procs) {
             std::cout << x.ID << "  " << x.exeName << "   " << x.memoryUsage << std::endl;
         }
+        cout << setprecision(3);
+        cout << "Physical memory used: " << double(resInfo.usedPhysMem) / (1024 * 1024)
+        << " / " << double(resInfo.totalPhysMem) / (1024 * 1024)  << "GB" << endl;
+
+        cout << "Virtual memory used: " << double(resInfo.usedVirtualMem) / (1024 * 1024)
+        << " / " << double(resInfo.totalVirtualMem) / (1024 * 1024) << "GB" << endl;
 
         this_thread::sleep_for(5s);
     }
