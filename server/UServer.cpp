@@ -33,6 +33,7 @@ UServer::~UServer()
     if (_status == status::up) {
         stop();
     }
+
     cleanupWinsock();
     return;
 }
@@ -128,10 +129,7 @@ void UServer::stop()
 
         int handledConnections = 0;
         for (int i = 1; handledConnections < nConnections; i++) {
-            if (fds[i].fd != 0) {
-                closesocket(fds[i].fd);
-                handledConnections++;
-            }
+            closeConnection(i);
         }
 
         joinThreads();
@@ -290,10 +288,8 @@ void UServer::handlingLoop()
                 if (packetSize == SOCKET_ERROR) {
                     //при "жестком" закрытии соединения
 
-                    if (WSAGetLastError() == WSAECONNRESET) {
-                        if (disconnHandler) {
-                            disconnHandler(clients[i]);
-                        }
+                    if (disconnHandler) {
+                        disconnHandler(clients[i]);
                     }
 
                     closeConnection(i);
@@ -352,16 +348,19 @@ UServer::status UServer::run()
 
 void UServer::closeConnection(const uint32_t connectionNum)
 {
-    closesocket(fds[connectionNum].fd);
+    if (fds[connectionNum].fd != 0) {
+        closesocket(fds[connectionNum].fd);
+        fds[connectionNum].fd = 0;
+        clients[connectionNum].fd = 0;
+    }
 
     //сбросить параметры
-    fds[connectionNum].fd = 0;
+
     fds[connectionNum].events = 0;
     clients[connectionNum].ref.reset();
-    clients[connectionNum].fd = 0;
 
     nConnections--;
-
+    return;
 }
 
 /*
@@ -590,8 +589,8 @@ UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
 UServer::Client::~Client()
 {
     //closesocket(this->fd);
-    int clientInd = std::find(owner->clients.begin(), owner->clients.end(), *this) - owner->clients.begin();
-    owner->closeConnection(clientInd);
+//     int clientInd = std::find(owner->clients.begin(), owner->clients.end(), *this) - owner->clients.begin();
+//     owner->closeConnection(clientInd);
 }
 
 /*

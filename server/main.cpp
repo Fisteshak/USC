@@ -43,7 +43,12 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
     }
     else {
 
-        std::cout << uref->name << ": " << data.data() << std::endl;
+        std::cout << uref->name << ": ";
+        for (int i = 0; i < data.size(); i++) {
+            cout << data[i];
+        }
+        cout << endl;
+
         UServer::DataBufferStr data2 = uref->name;
         data2 += ": ";
         data2 += data.data();
