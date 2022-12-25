@@ -27,7 +27,7 @@ target_include_directories(BBE-client PUBLIC client)
 target_link_libraries(LibUClient wtsapi32)
 
 target_link_libraries(BBE-server LibUServer)
-target_link_libraries(BBE-client LibUClient)
+target_link_libraries(BBE-client LibUClient pdh.dll)
 
 target_include_directories(BBE-server PUBLIC server)
 target_include_directories(BBE-client PUBLIC client)

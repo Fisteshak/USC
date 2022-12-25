@@ -8,12 +8,13 @@
 #include <cassert>
 #include <chrono>
 #include <iomanip>
+#include <cmath>
 
-
+#include "TCHAR.h"
+#include "pdh.h"
 #include "windows.h"
 #include <psapi.h>
 #include <tlhelp32.h>
-
 
 using namespace std;
 
@@ -21,15 +22,56 @@ struct process
 {
     string exeName;
     uint32_t ID;
-    uint64_t memoryUsage;
+    uint64_t memoryUsage;  //в КБ
 };
 
 struct SystemResInfo {
     vector <process> procs;
-    uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;
+    uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;   //в КБ
+    double procLoad;   //в процентах
 };
 
-vector<process> processes;
+
+static PDH_HQUERY cpuQuery;
+static PDH_HCOUNTER cpuTotal;
+
+
+void data_handler(UClient::DataBuffer& data)
+{
+
+    // for (int i = 0; i < data.size(); i++) {
+    //     std::cout << data[i];
+    // }
+    std::cout << data.data() << std::endl;
+}
+
+void conn_handler()
+{
+    std::cout << "[client] Succesfully connected to server" << std::endl;
+}
+
+void disconn_handler()
+{
+    std::cout << "[client] Disconnected from server" << std::endl;
+}
+
+
+
+void initPdh(){
+    PdhOpenQuery(NULL, NULL, &cpuQuery);
+    // You can also use L"\\Processor(*)\\% Processor Time" and get individual CPU values with PdhGetFormattedCounterArray()
+    PdhAddEnglishCounter(cpuQuery, TEXT("\\Processor(_Total)\\% Processor Time"), NULL, &cpuTotal);
+    PdhCollectQueryData(cpuQuery);
+}
+
+double getProcessorLoad(){
+    PDH_FMT_COUNTERVALUE counterVal;
+
+    PdhCollectQueryData(cpuQuery);
+    PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, NULL, &counterVal);
+    return counterVal.doubleValue;
+}
+
 
 process getProcessInfo(const DWORD processID)
 {
@@ -64,34 +106,12 @@ process getProcessInfo(const DWORD processID)
     // Release the handle to the process.
 
     CloseHandle(hProcess);
-    return {szProcessName, processID, pmc.WorkingSetSize};
+    return {szProcessName, processID, pmc.WorkingSetSize / 1024};
 }
 
-void getProcessesPSAPI(vector<process> &processes)
-{
-    DWORD aProcesses[1024], cbNeeded, cProcesses;
-    unsigned int i;
 
-    if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded))
-    {
-        return;
-    }
 
-    // Calculate how many process identifiers were returned.
 
-    cProcesses = cbNeeded / sizeof(DWORD);
-    processes.resize(cProcesses);
-
-    // Print the name and process identifier for each process.
-
-    for (i = 0; i < cProcesses; i++)
-    {
-        if (aProcesses[i] != 0)
-        {
-            processes[i] = getProcessInfo(aProcesses[i]);
-        }
-    }
-}
 
 // возвращает полный размер вектора с процессами
 int32_t getProcesses(vector<process> &processes)
@@ -140,7 +160,7 @@ int32_t getProcesses(vector<process> &processes)
         else
         {
             GetProcessMemoryInfo(hProcess, (PROCESS_MEMORY_COUNTERS *)&pmc, sizeof(pmc));
-            processes[i].memoryUsage = pmc.PrivateUsage;
+            processes[i].memoryUsage = pmc.PrivateUsage / 1024;
         }
 
         // имя + '\0' для разделения + ID + память
@@ -163,7 +183,7 @@ uint64_t getTotalPhysMem()
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
-    return memInfo.ullTotalPhys / 1024;
+    return (memInfo.ullTotalPhys / 1024);
 }
 
 //возвращает в КБ
@@ -181,7 +201,7 @@ uint64_t getTotalVirtMem()
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
-    return memInfo.ullTotalPageFile / 1024;
+    return (memInfo.ullTotalPageFile / 1024);
 }
 
 //возвращает в КБ
@@ -259,27 +279,10 @@ void resInfoToBytes(const SystemResInfo& resInfo, const uint32_t prSize, vector 
     j += sizeof(resInfo.usedPhysMem);
     memcpy(data.data() + j, &resInfo.totalPhysMem, sizeof(resInfo.totalPhysMem));
     j += sizeof(resInfo.totalPhysMem);
+    memcpy(data.data() + j, &resInfo.procLoad, sizeof(resInfo.procLoad));
+    j += sizeof(resInfo.procLoad);
 
     return;
-}
-
-void data_handler(UClient::DataBuffer& data)
-{
-
-    // for (int i = 0; i < data.size(); i++) {
-    //     std::cout << data[i];
-    // }
-    std::cout << data.data() << std::endl;
-}
-
-void conn_handler()
-{
-    std::cout << "[client] Succesfully connected to server" << std::endl;
-}
-
-void disconn_handler()
-{
-    std::cout << "[client] Disconnected from server" << std::endl;
 }
 
 
@@ -296,14 +299,14 @@ int main()
 
     client.connectTo("127.0.0.1", 9554);
 
-    if (client.getStatus() != UClient::status::connected) {
-        std::cout << "Failed to connect to a server\n";
-        return 0;
-    }
+    // if (client.getStatus() != UClient::status::connected) {
+    //     std::cout << "Failed to connect to a server\n";
+    //     return 0;
+    // }
 
     string name = "task manager";
     client.sendPacket(name);
-
+    initPdh();
     uint32_t size;
     SystemResInfo resInfo;
     while (true) {
@@ -314,34 +317,25 @@ int main()
         resInfo.totalPhysMem = getTotalPhysMem();
         resInfo.usedVirtualMem = getUsedVirtMem();
         resInfo.totalVirtualMem = getTotalVirtMem();
+        resInfo.procLoad = getProcessorLoad();
 
         resInfoToBytes(resInfo, size, buf);
 
         client.sendPacket(buf);
 
         for (const auto &x : resInfo.procs) {
-            std::cout << x.ID << "  " << x.exeName << "   " << x.memoryUsage << std::endl;
+            std::cout << x.ID << "  " << x.exeName << "   " << x.memoryUsage / 1024.0 << std::endl;
         }
-        cout << setprecision(3);
+        cout << setprecision(3) << fixed;
         cout << "Physical memory used: " << double(resInfo.usedPhysMem) / (1024 * 1024)
         << " / " << double(resInfo.totalPhysMem) / (1024 * 1024)  << "GB" << endl;
 
         cout << "Virtual memory used: " << double(resInfo.usedVirtualMem) / (1024 * 1024)
         << " / " << double(resInfo.totalVirtualMem) / (1024 * 1024) << "GB" << endl;
 
-        this_thread::sleep_for(5s);
+        cout << "Processor load: " << resInfo.procLoad << "%" << endl;
+
+        this_thread::sleep_for(2.5s);
     }
 
-
-
-//    bytesToProcesses(processes, buf);
-
-
-    // assert(processes.size() == processes2.size());
-    // for (int i = 0; i < processes.size(); i++)
-    // {
-    //     assert(processes[i].exeName == processes2[i].exeName);
-    //     assert(processes[i].ID == processes2[i].ID);
-    //     assert(processes[i].memoryUsage == processes2[i].memoryUsage);
-    // }
 }

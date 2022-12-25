@@ -32,6 +32,8 @@ struct process
 struct SystemResInfo {
     vector <process> procs;
     uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;
+    double procLoad;   //в процентах
+
 };
 
 //j - порядковый норер байта, куда начнется запись байт
@@ -70,7 +72,10 @@ void bytesToResInfo(SystemResInfo& resInfo, const vector <char>& data, uint32_t&
     j += sizeof(resInfo.usedPhysMem);
     memcpy(&resInfo.totalPhysMem, data.data() + j, sizeof(resInfo.totalPhysMem));
     j += sizeof(resInfo.totalPhysMem);
+    memcpy(&resInfo.procLoad, data.data() + j, sizeof(resInfo.procLoad));
+    j += sizeof(resInfo.procLoad);
 
+    return;
 }
 
 
@@ -105,6 +110,8 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 
         cout << "Virtual memory used: " << double(resInfo.usedVirtualMem) / (1024 * 1024)
         << " / " << double(resInfo.totalVirtualMem) / (1024 * 1024) << "GB" << endl;
+
+        cout << "Processor load: " << resInfo.procLoad << "%" << endl;
 
     }
     return;
