@@ -28,7 +28,7 @@ struct process
 struct SystemResInfo {
     vector <process> procs;
     uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;   //в КБ
-    double procLoad;   //в процентах
+    uint16_t procLoad;   //в процентах
 };
 
 
@@ -268,17 +268,24 @@ void resInfoToBytes(const SystemResInfo& resInfo, const uint32_t prSize, vector 
     processesToBytes(resInfo.procs, prSize, data);
 
     int j = data.size();
-    data.resize(data.size() + sizeof(resInfo.usedVirtualMem) + sizeof(resInfo.totalVirtualMem)
-        + sizeof(resInfo.usedPhysMem) + sizeof(resInfo.totalPhysMem));
 
+    data.resize(data.size() + sizeof(resInfo.usedVirtualMem));
     memcpy(data.data() + j, &resInfo.usedVirtualMem, sizeof(resInfo.usedVirtualMem));
     j += sizeof(resInfo.usedVirtualMem);
+
+    data.resize(data.size() + sizeof(resInfo.totalVirtualMem));
     memcpy(data.data() + j, &resInfo.totalVirtualMem, sizeof(resInfo.totalVirtualMem));
     j += sizeof(resInfo.totalVirtualMem);
+
+    data.resize(data.size() + sizeof(resInfo.usedPhysMem));
     memcpy(data.data() + j, &resInfo.usedPhysMem, sizeof(resInfo.usedPhysMem));
     j += sizeof(resInfo.usedPhysMem);
+
+    data.resize(data.size() + sizeof(resInfo.totalVirtualMem));
     memcpy(data.data() + j, &resInfo.totalPhysMem, sizeof(resInfo.totalPhysMem));
     j += sizeof(resInfo.totalPhysMem);
+
+    data.resize(data.size() + sizeof(resInfo.procLoad));
     memcpy(data.data() + j, &resInfo.procLoad, sizeof(resInfo.procLoad));
     j += sizeof(resInfo.procLoad);
 
@@ -317,7 +324,7 @@ int main()
         resInfo.totalPhysMem = getTotalPhysMem();
         resInfo.usedVirtualMem = getUsedVirtMem();
         resInfo.totalVirtualMem = getTotalVirtMem();
-        resInfo.procLoad = getProcessorLoad();
+        resInfo.procLoad = uint16_t(getProcessorLoad());
 
         resInfoToBytes(resInfo, size, buf);
 

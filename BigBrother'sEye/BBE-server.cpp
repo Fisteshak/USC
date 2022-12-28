@@ -32,7 +32,7 @@ struct process
 struct SystemResInfo {
     vector <process> procs;
     uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;
-    double procLoad;   //в процентах
+    uint16_t procLoad;   //в процентах
 
 };
 
@@ -78,9 +78,6 @@ void bytesToResInfo(SystemResInfo& resInfo, const vector <char>& data, uint32_t&
     return;
 }
 
-
-
-vector <process> processes;
 SystemResInfo resInfo;
 
 void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
@@ -97,7 +94,7 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         std::cout << "[server] " << uref->name << " connected\n";
     }
     else {
-        processes.clear();
+        resInfo.procs.clear();
         uint32_t j = 0;
         bytesToResInfo(resInfo, data, j);
         for (const auto &x : resInfo.procs) {
