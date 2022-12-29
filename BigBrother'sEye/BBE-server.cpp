@@ -17,10 +17,14 @@ UServer server("127.0.0.1", 9554, 50);
 struct user{
     std::string name = "";
     UServer::Client* sock;
+    bool operator==(const user &a) {
+        return (a.sock == sock and a.name == name);
+    }
 };
 
-std::vector <user> users;
+std::list <user> users;
 int nUsers = 0;
+
 
 struct process
 {
@@ -44,7 +48,7 @@ void bytesToProcesses(vector<process> &processes, const vector<char> &data, uint
     j += sizeof(procNum);
 
     processes.resize(procNum);
-    for (int i = 0; i < procNum; i++)
+    for (uint32_t i = 0; i < procNum; i++)
     {
         processes[i].exeName = (string)(data.data() + j);
         j += processes[i].exeName.size() + 1;
@@ -86,11 +90,15 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
     //user* uref = (user*)cl.ref;
     user* uref = std::any_cast <user*> (cl.ref);
     if (uref->name == "") {
-        int i = 0;
-        while (data[i] != '\0'){
-            uref->name.push_back(data[i]);
-            i++;
+        for (const auto& x : data) {
+            uref->name.push_back(x);
         }
+
+        // int i = 0;
+        // while (data[i] != '\0'){
+        //     uref->name.push_back(data[i]);
+        //     i++;
+        // }
         std::cout << "[server] " << uref->name << " connected\n";
     }
     else {
@@ -120,33 +128,22 @@ void disconn_handler(UServer::Client& cl)
 
     std::cout << "[server] " << uref->name << " disconnected"  << std::endl;
 
-    for (int i = 0; i < server.nConnections-1 || i < nUsers; i++) {
-        std::cerr << server.clients[i+1].getSocket() << ' ';
-        std::cerr << users[i].name << ' ' << users[i].sock << std::endl;
-    }
-
-
     cl.ref = nullptr;
 
-
-    for (int i = 0; i < nUsers; i++) {
-        if (*(users[i].sock) == cl) {
-            users[i] = users[nUsers-1];
-            users[i].sock->ref = &users[i];
-            break;
-        }
-    }
+    //удаление отсоединившегося
+    auto x = find(users.begin(), users.end(), *uref);
+    users.erase(x);
     nUsers--;
-
 
     return;
 }
 
 void conn_handler(UServer::Client& cl)
 {
-    users[nUsers].name = "";
-    users[nUsers].sock = &cl;
-    cl.ref = &users[nUsers];
+    // users2[nUsers].name = "";
+    // users2[nUsers].sock = &cl;
+    users.push_back({"", &cl});
+    cl.ref = &users.back();
     nUsers++;
 
     std::string s;

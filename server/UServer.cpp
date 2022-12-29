@@ -127,7 +127,7 @@ void UServer::stop()
 
         closesocket(listener);
 
-        int handledConnections = 0;
+        uint32_t handledConnections = 0;
         for (int i = 1; handledConnections < nConnections; i++) {
             closeConnection(i);
         }
@@ -150,7 +150,7 @@ void UServer::cleanup()
 {
     closesocket(listener);
 
-    int handledConnections = 0;
+    uint32_t handledConnections = 0;
     for (int i = 1; handledConnections < nConnections; i++) {
         if (fds[i].fd != 0) {
             closesocket(fds[i].fd);
@@ -333,7 +333,7 @@ UServer::status UServer::run()
 		return _status = error_listener_create;
 	}
 	//запустить поток обработки входящих сообщений
-	handlingLoopThread = std::thread(&handlingLoop, this);
+	handlingLoopThread = std::thread(&UServer::handlingLoop, this);
     //handlingLoop();
 
 	return _status;

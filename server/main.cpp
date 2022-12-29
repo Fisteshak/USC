@@ -23,7 +23,6 @@ struct user{
 };
 
 std::list <user> users;
-std::vector <user> users2;
 
 
 int nUsers = 0;
@@ -105,7 +104,6 @@ int main()
 
     std::cout << "[server] Server started working" << std::endl;
 
-    users2.resize(50);
     std::string x;
 
     UServer::DataBufferStr buf;

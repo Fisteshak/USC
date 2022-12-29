@@ -39,10 +39,11 @@ static PDH_HCOUNTER cpuTotal;
 void data_handler(UClient::DataBuffer& data)
 {
 
-    // for (int i = 0; i < data.size(); i++) {
-    //     std::cout << data[i];
-    // }
-    std::cout << data.data() << std::endl;
+    for (int i = 0; i < data.size(); i++) {
+        std::cout << data[i];
+    }
+    cout << endl;
+    //std::cout << data.data() << std::endl;
 }
 
 void conn_handler()

@@ -61,7 +61,7 @@ UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
         if (connHandler) {
             connHandler();
         }
-        recvHandlingLoopThread = std::thread(&recvHandlingLoop, this);
+        recvHandlingLoopThread = std::thread(&UClient::recvHandlingLoop, this);
 
     }
     else {
