@@ -5,6 +5,7 @@
 #include <atomic>
 #include <vector>
 #include <functional>
+#include <string>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
