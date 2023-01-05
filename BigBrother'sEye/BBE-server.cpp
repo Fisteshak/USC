@@ -9,6 +9,8 @@
 #include <fstream>
 #include <list>
 #include <fmt/format.h>
+#include <nlohmann/json.hpp>
+
 
 //#define DEBUG
 
@@ -107,6 +109,7 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         resInfo.procs.clear();
         uint32_t j = 0;
         bytesToResInfo(resInfo, data, j);
+
         for (const auto &x : resInfo.procs) {
             fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
         }
