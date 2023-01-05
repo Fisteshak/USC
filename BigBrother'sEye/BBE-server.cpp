@@ -8,6 +8,7 @@
 #include <any>
 #include <fstream>
 #include <list>
+#include <fmt/format.h>
 
 //#define DEBUG
 
@@ -31,12 +32,12 @@ struct process
 {
     string exeName;
     uint32_t ID;
-    uint64_t memoryUsage;
+    uint64_t memoryUsage; //в КБ
 };
 
 struct SystemResInfo {
     vector <process> procs;
-    uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem;
+    uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem; //в КБ
     uint16_t procLoad;   //в процентах
 
 };
@@ -107,17 +108,14 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         uint32_t j = 0;
         bytesToResInfo(resInfo, data, j);
         for (const auto &x : resInfo.procs) {
-            std::cout << x.ID << "  " << x.exeName << "   " << x.memoryUsage << std::endl;
+            fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
         }
 
-        cout << setprecision(3);
-        cout << "Physical memory used: " << double(resInfo.usedPhysMem) / (1024 * 1024)
-        << " / " << double(resInfo.totalPhysMem) / (1024 * 1024)  << "GB" << endl;
-
-        cout << "Virtual memory used: " << double(resInfo.usedVirtualMem) / (1024 * 1024)
-        << " / " << double(resInfo.totalVirtualMem) / (1024 * 1024) << "GB" << endl;
-
-        cout << "Processor load: " << resInfo.procLoad << "%" << endl;
+        fmt::print("Physical memory used: {:.3} / {:.3} GB\n",
+         double(resInfo.usedPhysMem) / (1024 * 1024), double(resInfo.usedPhysMem) / (1024 * 1024));
+        fmt::print("Virtual memory used: {:.3} / {:.3} GB\n",
+         double(resInfo.usedVirtualMem) / (1024 * 1024), double(resInfo.totalVirtualMem) / (1024 * 1024));
+        fmt::print("Processor load: {}%\n", resInfo.procLoad);
 
     }
     return;
