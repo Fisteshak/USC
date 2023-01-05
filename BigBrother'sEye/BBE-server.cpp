@@ -168,7 +168,6 @@ int main()
 
     std::cout << "[server] Server started working" << std::endl;
 
-    users.resize(50);
     std::string x;
 
     UServer::DataBufferStr buf;

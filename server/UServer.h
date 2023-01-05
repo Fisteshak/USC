@@ -51,6 +51,7 @@ public:
     //порта
     //максимального кол-ва соединенией (опционально)
     UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections = 100);
+    UServer() {};
     //деструктор
     ~UServer();
 

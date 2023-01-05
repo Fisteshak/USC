@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <UServer.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -14,8 +15,10 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    UServer server;
+    Ui::MainWindow *ui;
 
 private:
-    Ui::MainWindow *ui;
+
 };
 #endif // MAINWINDOW_H
