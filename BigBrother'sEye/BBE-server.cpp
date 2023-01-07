@@ -56,49 +56,24 @@ int compNum = 0;            //какой компьютер выводится �
 std::list <user> users;
 int nUsers = 0;
 
+void printProcesses(uint32_t num)
+{
+    auto user = users.begin();
+    num--;
+    while (num--) {
+        user++;
+    }
 
-// //j - порядковый норер байта, куда начнется запись байт
-// void bytesToProcesses(vector<process> &processes, const vector<unsigned char> &data, uint32_t &j)
-// {
-//     uint32_t procNum = 0;
-//     memcpy(&procNum, data.data(), sizeof(procNum));
-//     j += sizeof(procNum);
+    for (const auto& x : user->resInfo.procs) {
+        fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
+    }
 
-//     processes.resize(procNum);
-//     for (uint32_t i = 0; i < procNum; i++)
-//     {
-//         processes[i].exeName = (string)(data.data() + j);
-//         j += processes[i].exeName.size() + 1;
-
-//         memcpy(&processes[i].ID, data.data() + j, sizeof(processes[i].ID));
-//         j += sizeof(processes[i].ID);
-
-//         memcpy(&processes[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
-//         j += sizeof(processes[i].memoryUsage);
-//     }
-//     return;
-
-// }
-
-// //j - порядковый норер байта, куда начнется запись байт
-// void bytesToResInfo(SystemResInfo& resInfo, const vector <unsigned char>& data, uint32_t& j)
-// {
-//     bytesToProcesses(resInfo.procs, data, j);
-
-//     memcpy(&resInfo.usedVirtualMem, data.data() + j, sizeof(resInfo.usedVirtualMem));
-//     j += sizeof(resInfo.usedVirtualMem);
-//     memcpy(&resInfo.totalVirtualMem, data.data() + j, sizeof(resInfo.totalVirtualMem));
-//     j += sizeof(resInfo.totalVirtualMem);
-//     memcpy(&resInfo.usedPhysMem, data.data() + j, sizeof(resInfo.usedPhysMem));
-//     j += sizeof(resInfo.usedPhysMem);
-//     memcpy(&resInfo.totalPhysMem, data.data() + j, sizeof(resInfo.totalPhysMem));
-//     j += sizeof(resInfo.totalPhysMem);
-//     memcpy(&resInfo.procLoad, data.data() + j, sizeof(resInfo.procLoad));
-//     j += sizeof(resInfo.procLoad);
-
-//     return;
-// }
-
+    fmt::print("Physical memory used: {:.3} / {:.3} GB\n",
+        double(user->resInfo.usedPhysMem) / (1024 * 1024), double(user->resInfo.usedPhysMem) / (1024 * 1024));
+    fmt::print("Virtual memory used: {:.3} / {:.3} GB\n",
+        double(user->resInfo.usedVirtualMem) / (1024 * 1024), double(user->resInfo.totalVirtualMem) / (1024 * 1024));
+    fmt::print("Processor load: {}%\n", user->resInfo.procLoad);
+}
 
 void printComputers()
 {
@@ -189,24 +164,7 @@ void conn_handler(UServer::Client& cl)
 
 }
 
-void printProcesses(uint32_t num)
-{
-    auto user = users.begin();
-    num--;
-    while (num--) {
-        user++;
-    }
 
-    for (const auto& x : user->resInfo.procs) {
-        fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
-    }
-
-    fmt::print("Physical memory used: {:.3} / {:.3} GB\n",
-        double(user->resInfo.usedPhysMem) / (1024 * 1024), double(user->resInfo.usedPhysMem) / (1024 * 1024));
-    fmt::print("Virtual memory used: {:.3} / {:.3} GB\n",
-        double(user->resInfo.usedVirtualMem) / (1024 * 1024), double(user->resInfo.totalVirtualMem) / (1024 * 1024));
-    fmt::print("Processor load: {}%\n", user->resInfo.procLoad);
-}
 
 int main()
 {
