@@ -9,13 +9,15 @@
 #include <chrono>
 #include <iomanip>
 #include <cmath>
-#include <fmt/format.h>
 
 #include "TCHAR.h"
 #include "pdh.h"
 #include "windows.h"
 #include <psapi.h>
 #include <tlhelp32.h>
+
+#include <fmt/format.h>
+#include <alpaca/alpaca.h>
 
 using namespace std;
 
@@ -295,6 +297,15 @@ void resInfoToBytes(const SystemResInfo& resInfo, const uint32_t prSize, vector 
 }
 
 
+string GetComputerName()
+{
+    char buffer[MAX_COMPUTERNAME_LENGTH + 1] = "";
+    unsigned long size = MAX_COMPUTERNAME_LENGTH + 1;
+    ::GetComputerName(buffer, &size);
+
+    return string(buffer);
+}
+
 int main()
 {
 
@@ -313,7 +324,7 @@ int main()
     //     return 0;
     // }
 
-    string name = "task manager";
+    string name = GetComputerName();
     client.sendPacket(name);
     initPdh();
     uint32_t size;
@@ -328,7 +339,9 @@ int main()
         resInfo.totalVirtualMem = getTotalVirtMem();
         resInfo.procLoad = uint16_t(getProcessorLoad());
 
+        //vector <uint8_t> buf2;
         resInfoToBytes(resInfo, size, buf);
+        //alpaca::serialize(resInfo, buf2);
 
         client.sendPacket(buf);
 
@@ -341,20 +354,6 @@ int main()
         fmt::print("Virtual memory used: {:.3} / {:.3} GB\n",
          double(resInfo.usedVirtualMem) / (1024 * 1024), double(resInfo.totalVirtualMem) / (1024 * 1024));
         fmt::print("Processor load: {}%\n", resInfo.procLoad);
-
-
-
-        // for (const auto &x : resInfo.procs) {
-        //     std::cout << x.ID << "  " << x.exeName << "   " << x.memoryUsage / 1024.0 << std::endl;
-        // }
-        // cout << setprecision(3) << fixed;
-        // cout << "Physical memory used: " << double(resInfo.usedPhysMem) / (1024 * 1024)
-        // << " / " << double(resInfo.totalPhysMem) / (1024 * 1024)  << "GB" << endl;
-
-        // cout << "Virtual memory used: " << double(resInfo.usedVirtualMem) / (1024 * 1024)
-        // << " / " << double(resInfo.totalVirtualMem) / (1024 * 1024) << "GB" << endl;
-
-        // cout << "Processor load: " << resInfo.procLoad << "%" << endl;
 
         this_thread::sleep_for(2.5s);
     }

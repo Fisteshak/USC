@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(thirdparty/fmt)
 add_subdirectory(thirdparty/json-develop)
+add_subdirectory(thirdparty/alpaca-master)
 
 add_library(LibUServer STATIC server/UServer.cpp)
 add_library(LibUClient STATIC client/UClient.cpp)
@@ -25,8 +26,8 @@ target_link_libraries(client LibUClient ws2_32)
 target_link_libraries(LibUServer ws2_32)
 target_link_libraries(LibUClient ws2_32)
 
-target_link_libraries(BBE-server LibUServer fmt::fmt nlohmann_json::nlohmann_json)
-target_link_libraries(BBE-client LibUClient pdh.dll fmt::fmt)
+target_link_libraries(BBE-server LibUServer fmt::fmt nlohmann_json::nlohmann_json alpaca)
+target_link_libraries(BBE-client LibUClient pdh.dll fmt::fmt alpaca)
 
 target_include_directories(BBE-server PUBLIC server)
 target_include_directories(BBE-client PUBLIC client)
