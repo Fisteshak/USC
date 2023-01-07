@@ -448,7 +448,7 @@ int UServer::recvPacket(const UServer::Client& sock, DataBuffer& data)
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll(sock.fd, data.data(), dataLen);
+    recievedData = recvAll(sock.fd, (char*)data.data(), dataLen);
 
     return recievedData;
 }
@@ -547,7 +547,7 @@ UServer::Client::status UServer::Client::sendPacket(const DataBuffer& data)
     }
 
     int len = data.size();
-    int dataLen = sendAll(fd, data.data(), len);
+    int dataLen = sendAll(fd, (char*)data.data(), len);
 
     if (dataLen == SOCKET_ERROR) {
         _status = status::error_send_data;

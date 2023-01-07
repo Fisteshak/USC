@@ -57,47 +57,47 @@ std::list <user> users;
 int nUsers = 0;
 
 
-//j - порядковый норер байта, куда начнется запись байт
-void bytesToProcesses(vector<process> &processes, const vector<char> &data, uint32_t &j)
-{
-    uint32_t procNum = 0;
-    memcpy(&procNum, data.data(), sizeof(procNum));
-    j += sizeof(procNum);
+// //j - порядковый норер байта, куда начнется запись байт
+// void bytesToProcesses(vector<process> &processes, const vector<unsigned char> &data, uint32_t &j)
+// {
+//     uint32_t procNum = 0;
+//     memcpy(&procNum, data.data(), sizeof(procNum));
+//     j += sizeof(procNum);
 
-    processes.resize(procNum);
-    for (uint32_t i = 0; i < procNum; i++)
-    {
-        processes[i].exeName = (string)(data.data() + j);
-        j += processes[i].exeName.size() + 1;
+//     processes.resize(procNum);
+//     for (uint32_t i = 0; i < procNum; i++)
+//     {
+//         processes[i].exeName = (string)(data.data() + j);
+//         j += processes[i].exeName.size() + 1;
 
-        memcpy(&processes[i].ID, data.data() + j, sizeof(processes[i].ID));
-        j += sizeof(processes[i].ID);
+//         memcpy(&processes[i].ID, data.data() + j, sizeof(processes[i].ID));
+//         j += sizeof(processes[i].ID);
 
-        memcpy(&processes[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
-        j += sizeof(processes[i].memoryUsage);
-    }
-    return;
+//         memcpy(&processes[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
+//         j += sizeof(processes[i].memoryUsage);
+//     }
+//     return;
 
-}
+// }
 
-//j - порядковый норер байта, куда начнется запись байт
-void bytesToResInfo(SystemResInfo& resInfo, const vector <char>& data, uint32_t& j)
-{
-    bytesToProcesses(resInfo.procs, data, j);
+// //j - порядковый норер байта, куда начнется запись байт
+// void bytesToResInfo(SystemResInfo& resInfo, const vector <unsigned char>& data, uint32_t& j)
+// {
+//     bytesToProcesses(resInfo.procs, data, j);
 
-    memcpy(&resInfo.usedVirtualMem, data.data() + j, sizeof(resInfo.usedVirtualMem));
-    j += sizeof(resInfo.usedVirtualMem);
-    memcpy(&resInfo.totalVirtualMem, data.data() + j, sizeof(resInfo.totalVirtualMem));
-    j += sizeof(resInfo.totalVirtualMem);
-    memcpy(&resInfo.usedPhysMem, data.data() + j, sizeof(resInfo.usedPhysMem));
-    j += sizeof(resInfo.usedPhysMem);
-    memcpy(&resInfo.totalPhysMem, data.data() + j, sizeof(resInfo.totalPhysMem));
-    j += sizeof(resInfo.totalPhysMem);
-    memcpy(&resInfo.procLoad, data.data() + j, sizeof(resInfo.procLoad));
-    j += sizeof(resInfo.procLoad);
+//     memcpy(&resInfo.usedVirtualMem, data.data() + j, sizeof(resInfo.usedVirtualMem));
+//     j += sizeof(resInfo.usedVirtualMem);
+//     memcpy(&resInfo.totalVirtualMem, data.data() + j, sizeof(resInfo.totalVirtualMem));
+//     j += sizeof(resInfo.totalVirtualMem);
+//     memcpy(&resInfo.usedPhysMem, data.data() + j, sizeof(resInfo.usedPhysMem));
+//     j += sizeof(resInfo.usedPhysMem);
+//     memcpy(&resInfo.totalPhysMem, data.data() + j, sizeof(resInfo.totalPhysMem));
+//     j += sizeof(resInfo.totalPhysMem);
+//     memcpy(&resInfo.procLoad, data.data() + j, sizeof(resInfo.procLoad));
+//     j += sizeof(resInfo.procLoad);
 
-    return;
-}
+//     return;
+// }
 
 
 void printComputers()
@@ -139,7 +139,9 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
     else {
         uref->resInfo.procs.clear();
         uint32_t j = 0;
-        bytesToResInfo(uref->resInfo, data, j);
+        //bytesToResInfo(uref->resInfo, data, j);
+        std::error_code ec;
+        uref->resInfo = alpaca::deserialize<SystemResInfo>(data, ec);
 
         // for (const auto &x : uref->resInfo.procs) {
         //     fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);

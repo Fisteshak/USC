@@ -22,7 +22,7 @@ class UServer
 
 public:
     //тип буфера для данных
-    using DataBuffer = std::vector <char>;
+    using DataBuffer = std::vector <unsigned char>;
     using DataBufferStr = std::string;
     class Client;
 
