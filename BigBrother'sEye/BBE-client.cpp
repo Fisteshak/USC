@@ -46,7 +46,6 @@ void data_handler(UClient::DataBuffer& data)
         std::cout << data[i];
     }
     cout << endl;
-    //std::cout << data.data() << std::endl;
 }
 
 void conn_handler()
@@ -217,86 +216,6 @@ uint64_t getUsedVirtMem()
     return (memInfo.ullTotalPageFile - memInfo.ullAvailPageFile) / 1024;
 }
 
-// void bytesToProcesses(vector<process> &processes, const vector<char> &data)
-// {
-//     uint32_t procNum = 0;
-//     memcpy(&procNum, data.data(), sizeof(procNum));
-//     int j = sizeof(procNum);
-
-//     processes.resize(procNum);
-//     for (int i = 0; i < procNum; i++)
-//     {
-//         processes[i].exeName = (string)(data.data() + j);
-//         j += processes[i].exeName.size() + 1;
-
-//         memcpy(&processes[i].ID, data.data() + j, sizeof(processes[i].ID));
-//         j += sizeof(processes[i].ID);
-
-//         memcpy(&processes[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
-//         j += sizeof(processes[i].memoryUsage);
-//     }
-//     return;
-
-// }
-
-// void processesToBytes(const vector<process> &processes, uint32_t size, vector<char> &data)
-// {
-//     data.resize(size + 4, '\0');
-//     // количество процессов
-//     uint32_t procNum = processes.size();
-//     memcpy(data.data(), &procNum, sizeof(procNum));
-//     int j = sizeof(procNum);
-
-//     // to bytes
-//     for (int i = 0; i < processes.size(); i++)
-//     {
-//         processes[i].exeName.copy(data.data() + j, processes[i].exeName.size(), 0);
-
-//         j += processes[i].exeName.size();
-//         data[j] = '\0';
-//         j++;
-
-//         memcpy(data.data() + j, &processes[i].ID, sizeof(processes[i].ID));
-//         j += sizeof(processes[i].ID);
-
-//         memcpy(data.data() + j, &processes[i].memoryUsage, sizeof(processes[i].memoryUsage));
-//         j += sizeof(processes[i].memoryUsage);
-
-//     }
-//     return;
-// }
-
-// //prSize - размер массива процессов
-// void resInfoToBytes(const SystemResInfo& resInfo, const uint32_t prSize, vector <char>& data)
-// {
-//     processesToBytes(resInfo.procs, prSize, data);
-
-//     int j = data.size();
-
-//     data.resize(data.size() + sizeof(resInfo.usedVirtualMem));
-//     memcpy(data.data() + j, &resInfo.usedVirtualMem, sizeof(resInfo.usedVirtualMem));
-//     j += sizeof(resInfo.usedVirtualMem);
-
-//     data.resize(data.size() + sizeof(resInfo.totalVirtualMem));
-//     memcpy(data.data() + j, &resInfo.totalVirtualMem, sizeof(resInfo.totalVirtualMem));
-//     j += sizeof(resInfo.totalVirtualMem);
-
-//     data.resize(data.size() + sizeof(resInfo.usedPhysMem));
-//     memcpy(data.data() + j, &resInfo.usedPhysMem, sizeof(resInfo.usedPhysMem));
-//     j += sizeof(resInfo.usedPhysMem);
-
-//     data.resize(data.size() + sizeof(resInfo.totalVirtualMem));
-//     memcpy(data.data() + j, &resInfo.totalPhysMem, sizeof(resInfo.totalPhysMem));
-//     j += sizeof(resInfo.totalPhysMem);
-
-//     data.resize(data.size() + sizeof(resInfo.procLoad));
-//     memcpy(data.data() + j, &resInfo.procLoad, sizeof(resInfo.procLoad));
-//     j += sizeof(resInfo.procLoad);
-
-//     return;
-// }
-
-
 string GetComputerName()
 {
     char buffer[MAX_COMPUTERNAME_LENGTH + 1] = "";
@@ -331,7 +250,7 @@ int main()
     SystemResInfo resInfo;
     while (true) {
         resInfo.procs.clear();
-        size = getProcesses(resInfo.procs);
+        getProcesses(resInfo.procs);
 
         resInfo.usedPhysMem = getUsedPhysMem();
         resInfo.totalPhysMem = getTotalPhysMem();
@@ -339,7 +258,7 @@ int main()
         resInfo.totalVirtualMem = getTotalVirtMem();
         resInfo.procLoad = uint16_t(getProcessorLoad());
 
-        //resInfoToBytes(resInfo, size, buf);
+        buf.clear();
         alpaca::serialize(resInfo, buf);
 
         client.sendPacket(buf);
