@@ -183,6 +183,49 @@ uint32_t UServer::getPort()
     return listenerPort;
 }
 
+bool UServer::setPort(const uint32_t& port)
+{
+    if (_status == status::up) return false;
+
+    this->listenerPort = port;
+    return true;
+}
+
+bool UServer::setIP(const std::string& IP)
+{
+    if (_status == status::up) return false;
+    struct sockaddr_in sa;
+    int result = inet_pton(AF_INET, IP.c_str(), &(sa.sin_addr));
+    if (result != 0) {
+        listenerIP = IP;
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+
+uint32_t UServer::Client::getIP()
+{
+    sockaddr_in client_info = {0};
+    int addrsize = sizeof(client_info);
+
+    getpeername(getSocket(), (sockaddr*)&client_info, &addrsize);
+
+    return inet_addr(inet_ntoa(client_info.sin_addr));
+}
+
+std::string UServer::Client::getIPstr()
+{
+    sockaddr_in client_info = {0};
+    int addrsize = sizeof(client_info);
+
+    getpeername(getSocket(), (sockaddr*)&client_info, &addrsize);
+    return std::string(inet_ntoa(client_info.sin_addr));
+}
+
+
 void UServer::handlingLoop()
 {
 	while (_status == status::up) {
