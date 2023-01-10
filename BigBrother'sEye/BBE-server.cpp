@@ -38,6 +38,7 @@ struct SystemResInfo {
 
 struct user{
     std::string name = "";
+    std::string IP = "";
     UServer::Client* sock;
     SystemResInfo resInfo;
     bool operator==(const user &a) {
@@ -82,15 +83,15 @@ void printComputers()
     int num = 1;
 
     fmt::print(fmt::emphasis::bold,
-    "{:^3} {:<20} {:>15} {:>15} {:>4}\n",
-    "№", "Имя компьютера", "Вирт. память", "Физ. память", "CPU");
+    "{:^3} {:<20} {:^15} {:>15} {:>15} {:>4}\n",
+    "№", "Имя компьютера", "IP", "Вирт. память", "Физ. память", "CPU");
 
-    fmt::print("{:=<3} {:=<20} {:=>15} {:=>15} {:=>4}\n", "", "", "", "", "");
+    fmt::print("{:=<3} {:=<20} {:=>15} {:=>15} {:=>15} {:=>4}\n", "", "", "", "", "", "");
 
     for (const auto& x : users) {
 
-        fmt::print("{:2}. {:20} {:>5.1f} / {:4.1f} ГБ {:>5.1f} / {:4.1f} ГБ {:3}%\n",
-        num++, x.name,
+        fmt::print("{:2}. {:20} {:^15} {:>5.1f} / {:4.1f} ГБ {:>5.1f} / {:4.1f} ГБ {:3}%\n",
+        num++, x.name, x.IP,
         double(x.resInfo.usedVirtualMem) / (1024 * 1024), double(x.resInfo.totalVirtualMem) / (1024 * 1024),
         double(x.resInfo.usedPhysMem) / (1024 * 1024), double(x.resInfo.totalPhysMem) / (1024 * 1024),
         x.resInfo.procLoad);
@@ -153,7 +154,8 @@ void disconn_handler(UServer::Client& cl)
 
 void conn_handler(UServer::Client& cl)
 {
-    users.push_back({"", &cl});
+    users.push_back({"", cl.getIPstr(), &cl});
+
     cl.ref = &users.back();
     nUsers++;
 
@@ -166,19 +168,41 @@ void conn_handler(UServer::Client& cl)
 
 
 
-int main()
+
+int main(int argc, char *argv[])
 {
 
     #ifndef DEBUG
     std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
     #endif
 
+    //установить IP и порт из аргументов
+    if (argc > 1) {
+        std::string IP_Port = argv[1];
+        if (IP_Port.find(":") != string::npos) {
+            try {
+                server.setPort(stoul(IP_Port.substr(IP_Port.find(":")+1, IP_Port.size())));
+            }
+            catch (std::exception) {
+                fmt::print("Неправильный порт\n");
+                return 1;
+            }
+            server.setIP(IP_Port.substr(0, IP_Port.find(":")));
+        }
+        else {
+            server.setIP(IP_Port.substr(0, IP_Port.find(":")));
+        }
+    }
+
     server.setDataHandler(data_handler);
     server.setDisconnHandler(disconn_handler);
     server.setConnHandler(conn_handler);
     server.run();
 
-    fmt::print("[server] Server started working\n");
+    if (server.getStatus() == UServer::status::up) fmt::print("[server] Сервер начал работу\n");
+    else {
+        return 1;
+    }
 
     std::string s;
 

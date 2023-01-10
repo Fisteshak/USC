@@ -225,10 +225,32 @@ string GetComputerName()
     return string(buffer);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-
     UClient client;
+
+    //IP и порт по умолчанию
+    uint32_t port = 9554;
+    std::string IP = "127.0.0.1";
+
+    //установить IP и порт из аргументов
+    if (argc > 1) {
+        std::string IP_Port = argv[1];
+        if (IP_Port.find(":") != string::npos) {
+            try {
+                port = stoul(IP_Port.substr(IP_Port.find(":")+1, IP_Port.size()));
+            }
+            catch (std::exception) {
+                fmt::print("Неправильный порт\n");
+                return 1;
+            }
+            IP = IP_Port.substr(0, IP_Port.find(":"));
+        }
+        else {
+            IP = IP_Port.substr(0, IP_Port.find(":"));
+        }
+    }
+
 
     client.setDataHandler(data_handler);
     client.setDisconnHandler(disconn_handler);
@@ -236,7 +258,7 @@ int main()
 
     UClient::DataBuffer buf;
 
-    client.connectTo("127.0.0.1", 9554);
+    client.connectTo(IP, port);
 
     // if (client.getStatus() != UClient::status::connected) {
     //     std::cout << "Failed to connect to a server\n";
