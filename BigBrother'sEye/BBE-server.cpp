@@ -9,6 +9,8 @@
 #include <fstream>
 #include <list>
 #include <string>
+#include <locale.h>
+
 
 #include <fmt/format.h>
 #include <fmt/color.h>
@@ -20,7 +22,7 @@
 
 using namespace std;
 
-UServer server("127.0.0.1", 9554, 50);
+UServer server("192.168.100.4", 9554, 50);
 
 struct process
 {
@@ -95,6 +97,7 @@ void printComputers()
         double(x.resInfo.usedVirtualMem) / (1024 * 1024), double(x.resInfo.totalVirtualMem) / (1024 * 1024),
         double(x.resInfo.usedPhysMem) / (1024 * 1024), double(x.resInfo.totalPhysMem) / (1024 * 1024),
         x.resInfo.procLoad);
+        //cout << x.name << endl;
     }
     return;
 }
@@ -105,12 +108,11 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
     user* uref = std::any_cast <user*> (cl.ref);
     if (uref->name == "") {
         for (const auto& x : data) {
-            uref->name.push_back(x);
+            if (x == '-' or ('A' <= x and x <= 'Z') or ('a' <= x and x <= 'z') or ('0' <= x and x <= '9'))
+                uref->name.push_back(x);
         }
-        system("cls");
 
         printComputers();
-
     }
     else {
         uref->resInfo.procs.clear();
@@ -172,6 +174,12 @@ void conn_handler(UServer::Client& cl)
 int main(int argc, char *argv[])
 {
 
+    //std::setlocale(LC_ALL,"Russian");
+    //std::locale utf8_to_utf16(std::locale(), new std::codecvt_utf8<wchar_t>);
+    //std::locale::global(std::locale("RU"));
+    //std::locale cp1251_locale("en_US.UTF-16");
+    //std::locale::global(std::locale("POSIX"));
+    std::cout << "The default locale is " << std::locale().name() << '\n';
     #ifndef DEBUG
     std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
     #endif
