@@ -9,6 +9,7 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include "windows.h"
+#include <ciso646>
 
 #include "UServer.h"
 
@@ -573,6 +574,18 @@ void UServer::setDisconnHandler(const ConnHandler handler)
     return;
 }
 
+
+void UServer::disconnect(UServer::Client& cl)
+{
+    auto clNum = find(clients.begin(), clients.end(), cl) - clients.begin();
+    if (disconnHandler) {
+        disconnHandler(clients[clNum]);
+    }
+    closeConnection(clNum);
+    return;
+}
+
+
 UServer::Client::status UServer::Client::getStatus()
 {
     return _status;
@@ -628,6 +641,8 @@ UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
 
     return _status;
 }
+
+
 
 UServer::Client::~Client()
 {

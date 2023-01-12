@@ -10,6 +10,8 @@
 #include <list>
 #include <string>
 #include <locale.h>
+#include <ciso646>
+
 
 
 #include <fmt/format.h>
@@ -22,7 +24,7 @@
 
 using namespace std;
 
-UServer server("192.168.100.4", 9554, 50);
+UServer server("127.0.0.1", 9554, 50);
 
 struct process
 {
@@ -33,8 +35,8 @@ struct process
 
 struct SystemResInfo {
     vector <process> procs;
-    uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem; //в КБ
-    uint16_t procLoad;   //в процентах
+    uint64_t usedVirtualMem = 0, totalVirtualMem = 0, usedPhysMem = 0, totalPhysMem = 0; //в КБ
+    uint16_t procLoad = 0;   //в процентах
 
 };
 
@@ -46,6 +48,9 @@ struct user{
     bool operator==(const user &a) {
         return (a.sock == sock and a.name == name);
     }
+    enum Status {
+        connected, disconnected
+    } status = disconnected;
 };
 
 enum Mode {
@@ -85,18 +90,31 @@ void printComputers()
     int num = 1;
 
     fmt::print(fmt::emphasis::bold,
-    "{:^3} {:<20} {:^15} {:>15} {:>15} {:>4}\n",
-    "№", "Имя компьютера", "IP", "Вирт. память", "Физ. память", "CPU");
+    "{:^3} {:<20} {:^15} {:>15} {:>15} {:>4} {:>10}\n",
+    "№", "Имя компьютера", "IP", "Вирт. память", "Физ. память", "CPU", "Статус");
 
-    fmt::print("{:=<3} {:=<20} {:=>15} {:=>15} {:=>15} {:=>4}\n", "", "", "", "", "", "");
+    fmt::print("{:=<3} {:=<20} {:=>15} {:=>15} {:=>15} {:=>4} {:=>10}\n", "", "", "", "", "", "", "");
 
     for (const auto& x : users) {
 
-        fmt::print("{:2}. {:20} {:^15} {:>5.1f} / {:4.1f} ГБ {:>5.1f} / {:4.1f} ГБ {:3}%\n",
-        num++, x.name, x.IP,
-        double(x.resInfo.usedVirtualMem) / (1024 * 1024), double(x.resInfo.totalVirtualMem) / (1024 * 1024),
-        double(x.resInfo.usedPhysMem) / (1024 * 1024), double(x.resInfo.totalPhysMem) / (1024 * 1024),
-        x.resInfo.procLoad);
+        fmt::print("{:2}. {:20} {:^15} {:>5.1f} / {:4.1f} ГБ {:>5.1f} / {:4.1f} ГБ {:3}% ",
+            num++, x.name, x.IP,
+            double(x.resInfo.usedVirtualMem) / (1024 * 1024), double(x.resInfo.totalVirtualMem) / (1024 * 1024),
+            double(x.resInfo.usedPhysMem) / (1024 * 1024), double(x.resInfo.totalPhysMem) / (1024 * 1024),
+            x.resInfo.procLoad);
+
+        switch (x.status)
+        {
+        case user::Status::connected:
+            fmt::print(fg(fmt::color::green), "{:>10}\n", "В СЕТИ");
+            break;
+        case user::Status::disconnected:
+            fmt::print(fg(fmt::color::red), "{:>10}\n", "НЕ В СЕТИ");
+            break;
+        default:
+            break;
+        }
+
         //cout << x.name << endl;
     }
     return;
@@ -110,6 +128,9 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         for (const auto& x : data) {
             if (x == '-' or ('A' <= x and x <= 'Z') or ('a' <= x and x <= 'z') or ('0' <= x and x <= '9'))
                 uref->name.push_back(x);
+        }
+        if (uref->name.empty()) {
+            uref->name = "Безымянный";
         }
 
         printComputers();
@@ -140,14 +161,18 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 
 void disconn_handler(UServer::Client& cl)
 {
+    if (!cl.ref.has_value()) return;
     user* uref = std::any_cast <user*> (cl.ref);
 
     cl.ref = nullptr;
 
     //удаление отсоединившегося
     auto x = find(users.begin(), users.end(), *uref);
-    users.erase(x);
-    nUsers--;
+
+    x->status = user::Status::disconnected;
+
+    //users.erase(x);
+    //nUsers--;
 
     printComputers();
 
@@ -156,9 +181,40 @@ void disconn_handler(UServer::Client& cl)
 
 void conn_handler(UServer::Client& cl)
 {
-    users.push_back({"", cl.getIPstr(), &cl});
+    // user temp;
 
-    cl.ref = &users.back();
+    // temp.name = "";
+    // temp.IP = cl.getIPstr();
+    // temp.sock = &cl;
+    // temp.status = user::Status::connected;
+
+//    users.push_back(temp);
+
+    auto x = find_if(users.begin(), users.end(), [&](const user& a){return a.IP == cl.getIPstr();});
+
+
+    if (x != users.end()) {
+        if (x->status != user::Status::connected) {
+            x->status = user::Status::connected;
+            cl.ref = &(*x);
+        }
+        else {
+            server.disconnect(cl);
+        }
+    }
+    else {
+        user temp;
+
+        temp.name = "";
+        temp.IP = cl.getIPstr();
+        temp.sock = &cl;
+        temp.status = user::Status::connected;
+
+        users.push_back(temp);
+        cl.ref = &users.back();
+    }
+
+
     nUsers++;
 
     std::string s;
@@ -175,11 +231,9 @@ int main(int argc, char *argv[])
 {
 
     //std::setlocale(LC_ALL,"Russian");
-    //std::locale utf8_to_utf16(std::locale(), new std::codecvt_utf8<wchar_t>);
-    //std::locale::global(std::locale("RU"));
-    //std::locale cp1251_locale("en_US.UTF-16");
     //std::locale::global(std::locale("POSIX"));
-    std::cout << "The default locale is " << std::locale().name() << '\n';
+    //std::cout << "The default locale is " << std::locale().name() << '\n';
+
     #ifndef DEBUG
     std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
     #endif
@@ -207,7 +261,7 @@ int main(int argc, char *argv[])
     server.setConnHandler(conn_handler);
     server.run();
 
-    if (server.getStatus() == UServer::status::up) fmt::print("[server] Сервер начал работу\n");
+    if (server.getStatus() == UServer::status::up) fmt::print("[server] Сервер запущен\n");
     else {
         return 1;
     }
@@ -221,6 +275,6 @@ int main(int argc, char *argv[])
     } while (s != ":stop");
 
     server.stop();
-    std::cout << "[server] Server stopped working" << std::endl;
+    std::cout << "[server] Сервер остановлен" << std::endl;
     return 0;
 }

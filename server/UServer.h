@@ -84,15 +84,18 @@ public:
     //порт не будет изменен, если сервер работает в данный момент времени (getStatus() == status::up)
     //возвращает true при успехе, false при неудаче
     bool setPort(const uint32_t& port);
+    void disconnect(Client& cl);
+
+
+    //количество текущих подключенных соединений (включая сокет listener)
+    uint32_t nConnections = 0;
+
+
+private:
 
     //массив клиентов
     //каждый элемент соответствует элементу fds с тем же индексом
     std::vector <Client> clients;
-    //количество текущих подключенных соединений (включая сокет listener)
-    uint32_t nConnections = 0;
-
-private:
-
     //завершить все потоки
     void joinThreads();
     //Инициализирует сетевой интерфейс для сокетов.
