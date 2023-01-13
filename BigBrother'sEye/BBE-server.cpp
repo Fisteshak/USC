@@ -4,6 +4,7 @@
 #include <memory>
 #include <thread>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <any>
 #include <fstream>
@@ -11,8 +12,6 @@
 #include <string>
 #include <locale.h>
 #include <ciso646>
-
-
 
 #include <fmt/format.h>
 #include <fmt/color.h>
@@ -23,6 +22,7 @@
 //#define DEBUG
 
 using namespace std;
+using json = nlohmann::json;
 
 UServer server("127.0.0.1", 9554, 50);
 
@@ -40,6 +40,8 @@ struct SystemResInfo {
 
 };
 
+fstream fout("data.json");
+json dataJson;
 struct user{
     std::string name = "";
     std::string IP = "";
@@ -82,6 +84,19 @@ void printProcesses(uint32_t num)
         double(user->resInfo.usedVirtualMem) / (1024 * 1024), double(user->resInfo.totalVirtualMem) / (1024 * 1024));
     fmt::print("Processor load: {}%\n", user->resInfo.procLoad);
 }
+
+void printComputersToJson()
+{
+    int i = 0;
+    for (const auto& x : users) {
+        dataJson["computers"][i]["name"] = x.name;
+        dataJson["computers"][i]["IP"] = x.IP;
+        dataJson["computers"][i]["status"] = int(x.status);
+        i++;
+    }
+    return;
+}
+
 
 void printComputers()
 {
@@ -156,6 +171,8 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 
 
     }
+    printComputersToJson();
+    //fout << dataJson;
     return;
 }
 
@@ -175,7 +192,8 @@ void disconn_handler(UServer::Client& cl)
     //nUsers--;
 
     printComputers();
-
+    printComputersToJson();
+    //fout << dataJson;
     return;
 }
 
@@ -220,8 +238,11 @@ void conn_handler(UServer::Client& cl)
     std::string s;
     s = "[server] Succesfully connected";
     cl.sendPacket(s);
-    return;
 
+    printComputersToJson();
+    fout << dataJson;
+
+    return;
 }
 
 
@@ -237,6 +258,8 @@ int main(int argc, char *argv[])
     #ifndef DEBUG
     std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
     #endif
+
+    fout << setw(4);
 
     //установить IP и порт из аргументов
     if (argc > 1) {
