@@ -24,7 +24,8 @@
 using namespace std;
 using json = nlohmann::json;
 
-UServer server("127.0.0.1", 9554, 50);
+//UServer server("127.0.0.1", 9554, 50);
+UServer server(9554, 50);
 
 struct process
 {
@@ -40,13 +41,14 @@ struct SystemResInfo {
 
 };
 
-fstream fout("data.json");
+ofstream fout;
 json dataJson;
 struct user{
     std::string name = "";
     std::string IP = "";
     UServer::Client* sock;
     SystemResInfo resInfo;
+    bool noData = true;    //resInfo еще не пришли
     bool operator==(const user &a) {
         return (a.sock == sock and a.name == name);
     }
@@ -90,10 +92,17 @@ void printComputersToJson()
     int i = 0;
     for (const auto& x : users) {
         dataJson["computers"][i]["name"] = x.name;
+        dataJson["computers"][i]["totVirtMem"] = x.resInfo.totalVirtualMem;
+        dataJson["computers"][i]["totPhysMem"] = x.resInfo.totalPhysMem;
         dataJson["computers"][i]["IP"] = x.IP;
         dataJson["computers"][i]["status"] = int(x.status);
+
         i++;
     }
+
+    fout.open("data.json");
+    fout << setw(4) << dataJson;
+    fout.close();
     return;
 }
 
@@ -130,7 +139,6 @@ void printComputers()
             break;
         }
 
-        //cout << x.name << endl;
     }
     return;
 }
@@ -149,12 +157,14 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         }
 
         printComputers();
+        printComputersToJson();
     }
     else {
         uref->resInfo.procs.clear();
         uint32_t j = 0;
         //bytesToResInfo(uref->resInfo, data, j);
         std::error_code ec;
+
         uref->resInfo = alpaca::deserialize<SystemResInfo>(data, ec);
 
         // for (const auto &x : uref->resInfo.procs) {
@@ -168,11 +178,13 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         // fmt::print("Processor load: {}%\n", uref->resInfo.procLoad);
         //printProcesses();
         printComputers();
+        if (uref->noData) {
+            uref->noData = false;
+            printComputersToJson();
+        }
 
 
     }
-    printComputersToJson();
-    //fout << dataJson;
     return;
 }
 
@@ -192,8 +204,6 @@ void disconn_handler(UServer::Client& cl)
     //nUsers--;
 
     printComputers();
-    printComputersToJson();
-    //fout << dataJson;
     return;
 }
 
@@ -232,15 +242,15 @@ void conn_handler(UServer::Client& cl)
         cl.ref = &users.back();
     }
 
-
     nUsers++;
 
     std::string s;
     s = "[server] Succesfully connected";
     cl.sendPacket(s);
 
-    printComputersToJson();
-    fout << dataJson;
+    //printComputersToJson();
+
+
 
     return;
 }
@@ -258,8 +268,6 @@ int main(int argc, char *argv[])
     #ifndef DEBUG
     std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
     #endif
-
-    fout << setw(4);
 
     //установить IP и порт из аргументов
     if (argc > 1) {

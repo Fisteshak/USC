@@ -12,6 +12,7 @@
 #include <ciso646>
 
 #include "UServer.h"
+#include "../crypto/aes.h"
 
 UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
@@ -25,6 +26,23 @@ UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnecti
 
     fds.resize(this->nMaxConnections);
     clients.resize(this->nMaxConnections);
+
+    return;
+}
+
+UServer::UServer(int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort)
+{
+    if (nMaxConnections == 0) {
+        throw std::runtime_error("nMaxConnections value should not be zero");
+    }
+    if (nMaxConnections > SOMAXCONN) {
+        throw std::runtime_error("nMaxConnections value is too big");
+    }
+    this->nMaxConnections = nMaxConnections+1;
+
+    fds.resize(this->nMaxConnections);
+    clients.resize(this->nMaxConnections);
+    listenerIP.clear();
 
     return;
 }
@@ -64,6 +82,7 @@ void UServer::cleanupWinsock()
 Socket UServer::createListener()
 {
 
+
     //создать сокет
     Socket listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener == INVALID_SOCKET) return INVALID_SOCKET;
@@ -85,22 +104,36 @@ Socket UServer::createListener()
 		return INVALID_SOCKET;
     }
 
-    //преобразовать IP в структуру in_addr
-    in_addr serv_ip;
 
-	if (inet_pton(AF_INET, listenerIP.data(), &serv_ip) <= 0) {
-        closesocket(listener);
-		return INVALID_SOCKET;
-	}
+    if (!listenerIP.empty()) {
+        //если IP для сервера указан
+    }
 
 	//привязка к сокету адреса и порта
-	sockaddr_in servInfo;
 
+	sockaddr_in servInfo;
 	ZeroMemory(&servInfo, sizeof(servInfo));    //обнулить
 
 	servInfo.sin_family = AF_INET;
 	servInfo.sin_port = htons(listenerPort);
-	servInfo.sin_addr = serv_ip;
+
+    //если IP указан
+    if (!listenerIP.empty()) {
+        //преобразовать IP в структуру in_addr
+        int err;
+        in_addr serv_ip;
+        err = inet_pton(AF_INET, listenerIP.data(), &serv_ip);
+	    if (err <= 0) {
+            closesocket(listener);
+		    return INVALID_SOCKET;
+	    }
+        //установить
+    	servInfo.sin_addr = serv_ip;
+    }
+    else {
+        //иначе использовать любой
+        servInfo.sin_addr.s_addr = INADDR_ANY;
+    }
 
 	int servInfoLen = sizeof(servInfo);
 
@@ -272,6 +305,7 @@ void UServer::handlingLoop()
 
                     //добавить в массив соединений
                     int newConnInd = addConnection(new_conn);
+
 
 
                     if (connHandler) {
