@@ -9,8 +9,10 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include "windows.h"
+#include <ciso646>
 
 #include "UServer.h"
+#include "../crypto/aes.h"
 
 UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
@@ -24,6 +26,23 @@ UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnecti
 
     fds.resize(this->nMaxConnections);
     clients.resize(this->nMaxConnections);
+
+    return;
+}
+
+UServer::UServer(int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort)
+{
+    if (nMaxConnections == 0) {
+        throw std::runtime_error("nMaxConnections value should not be zero");
+    }
+    if (nMaxConnections > SOMAXCONN) {
+        throw std::runtime_error("nMaxConnections value is too big");
+    }
+    this->nMaxConnections = nMaxConnections+1;
+
+    fds.resize(this->nMaxConnections);
+    clients.resize(this->nMaxConnections);
+    listenerIP.clear();
 
     return;
 }
@@ -63,6 +82,7 @@ void UServer::cleanupWinsock()
 Socket UServer::createListener()
 {
 
+
     //создать сокет
     Socket listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener == INVALID_SOCKET) return INVALID_SOCKET;
@@ -84,22 +104,36 @@ Socket UServer::createListener()
 		return INVALID_SOCKET;
     }
 
-    //преобразовать IP в структуру in_addr
-    in_addr serv_ip;
 
-	if (inet_pton(AF_INET, listenerIP.data(), &serv_ip) <= 0) {
-        closesocket(listener);
-		return INVALID_SOCKET;
-	}
+    if (!listenerIP.empty()) {
+        //если IP для сервера указан
+    }
 
 	//привязка к сокету адреса и порта
-	sockaddr_in servInfo;
 
+	sockaddr_in servInfo;
 	ZeroMemory(&servInfo, sizeof(servInfo));    //обнулить
 
 	servInfo.sin_family = AF_INET;
 	servInfo.sin_port = htons(listenerPort);
-	servInfo.sin_addr = serv_ip;
+
+    //если IP указан
+    if (!listenerIP.empty()) {
+        //преобразовать IP в структуру in_addr
+        int err;
+        in_addr serv_ip;
+        err = inet_pton(AF_INET, listenerIP.data(), &serv_ip);
+	    if (err <= 0) {
+            closesocket(listener);
+		    return INVALID_SOCKET;
+	    }
+        //установить
+    	servInfo.sin_addr = serv_ip;
+    }
+    else {
+        //иначе использовать любой
+        servInfo.sin_addr.s_addr = INADDR_ANY;
+    }
 
 	int servInfoLen = sizeof(servInfo);
 
@@ -183,6 +217,49 @@ uint32_t UServer::getPort()
     return listenerPort;
 }
 
+bool UServer::setPort(const uint32_t& port)
+{
+    if (_status == status::up) return false;
+
+    this->listenerPort = port;
+    return true;
+}
+
+bool UServer::setIP(const std::string& IP)
+{
+    if (_status == status::up) return false;
+    struct sockaddr_in sa;
+    int result = inet_pton(AF_INET, IP.c_str(), &(sa.sin_addr));
+    if (result != 0) {
+        listenerIP = IP;
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+
+uint32_t UServer::Client::getIP()
+{
+    sockaddr_in client_info = {0};
+    int addrsize = sizeof(client_info);
+
+    getpeername(getSocket(), (sockaddr*)&client_info, &addrsize);
+
+    return inet_addr(inet_ntoa(client_info.sin_addr));
+}
+
+std::string UServer::Client::getIPstr()
+{
+    sockaddr_in client_info = {0};
+    int addrsize = sizeof(client_info);
+
+    getpeername(getSocket(), (sockaddr*)&client_info, &addrsize);
+    return std::string(inet_ntoa(client_info.sin_addr));
+}
+
+
 void UServer::handlingLoop()
 {
 	while (_status == status::up) {
@@ -228,6 +305,7 @@ void UServer::handlingLoop()
 
                     //добавить в массив соединений
                     int newConnInd = addConnection(new_conn);
+
 
 
                     if (connHandler) {
@@ -448,7 +526,7 @@ int UServer::recvPacket(const UServer::Client& sock, DataBuffer& data)
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll(sock.fd, data.data(), dataLen);
+    recievedData = recvAll(sock.fd, (char*)data.data(), dataLen);
 
     return recievedData;
 }
@@ -530,6 +608,18 @@ void UServer::setDisconnHandler(const ConnHandler handler)
     return;
 }
 
+
+void UServer::disconnect(UServer::Client& cl)
+{
+    auto clNum = find(clients.begin(), clients.end(), cl) - clients.begin();
+    if (disconnHandler) {
+        disconnHandler(clients[clNum]);
+    }
+    closeConnection(clNum);
+    return;
+}
+
+
 UServer::Client::status UServer::Client::getStatus()
 {
     return _status;
@@ -547,7 +637,7 @@ UServer::Client::status UServer::Client::sendPacket(const DataBuffer& data)
     }
 
     int len = data.size();
-    int dataLen = sendAll(fd, data.data(), len);
+    int dataLen = sendAll(fd, (char*)data.data(), len);
 
     if (dataLen == SOCKET_ERROR) {
         _status = status::error_send_data;
@@ -585,6 +675,8 @@ UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
 
     return _status;
 }
+
+
 
 UServer::Client::~Client()
 {

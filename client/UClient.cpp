@@ -168,7 +168,7 @@ UClient::status UClient::sendPacket(const DataBuffer& data)
     }
 
     int len = data.size();
-    int dataLen = sendAll(data.data(), len);
+    int dataLen = sendAll((char*)data.data(), len);
 
     if (dataLen == SOCKET_ERROR) {
         disconnect();
@@ -228,7 +228,7 @@ int UClient::recvPacket(DataBuffer& data)
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll(data.data(), dataLen);
+    recievedData = recvAll((char*)data.data(), dataLen);
 
     return recievedData;
 }

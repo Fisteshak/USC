@@ -4,11 +4,14 @@
 #include <memory>
 #include <thread>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <any>
 #include <fstream>
 #include <list>
 #include <string>
+#include <locale.h>
+#include <ciso646>
 
 #include <fmt/format.h>
 #include <fmt/color.h>
@@ -19,8 +22,10 @@
 //#define DEBUG
 
 using namespace std;
+using json = nlohmann::json;
 
-UServer server("127.0.0.1", 9554, 50);
+//UServer server("127.0.0.1", 9554, 50);
+UServer server(9554, 50);
 
 struct process
 {
@@ -31,18 +36,25 @@ struct process
 
 struct SystemResInfo {
     vector <process> procs;
-    uint64_t usedVirtualMem, totalVirtualMem, usedPhysMem, totalPhysMem; //в КБ
-    uint16_t procLoad;   //в процентах
+    uint64_t usedVirtualMem = 0, totalVirtualMem = 0, usedPhysMem = 0, totalPhysMem = 0; //в КБ
+    uint16_t procLoad = 0;   //в процентах
 
 };
 
+ofstream fout;
+json dataJson;
 struct user{
     std::string name = "";
+    std::string IP = "";
     UServer::Client* sock;
     SystemResInfo resInfo;
+    bool noData = true;    //resInfo еще не пришли
     bool operator==(const user &a) {
         return (a.sock == sock and a.name == name);
     }
+    enum Status {
+        connected, disconnected
+    } status = disconnected;
 };
 
 enum Mode {
@@ -55,137 +67,6 @@ int compNum = 0;            //какой компьютер выводится �
 
 std::list <user> users;
 int nUsers = 0;
-
-
-//j - порядковый норер байта, куда начнется запись байт
-void bytesToProcesses(vector<process> &processes, const vector<char> &data, uint32_t &j)
-{
-    uint32_t procNum = 0;
-    memcpy(&procNum, data.data(), sizeof(procNum));
-    j += sizeof(procNum);
-
-    processes.resize(procNum);
-    for (uint32_t i = 0; i < procNum; i++)
-    {
-        processes[i].exeName = (string)(data.data() + j);
-        j += processes[i].exeName.size() + 1;
-
-        memcpy(&processes[i].ID, data.data() + j, sizeof(processes[i].ID));
-        j += sizeof(processes[i].ID);
-
-        memcpy(&processes[i].memoryUsage, data.data() + j, sizeof(processes[i].memoryUsage));
-        j += sizeof(processes[i].memoryUsage);
-    }
-    return;
-
-}
-
-//j - порядковый норер байта, куда начнется запись байт
-void bytesToResInfo(SystemResInfo& resInfo, const vector <char>& data, uint32_t& j)
-{
-    bytesToProcesses(resInfo.procs, data, j);
-
-    memcpy(&resInfo.usedVirtualMem, data.data() + j, sizeof(resInfo.usedVirtualMem));
-    j += sizeof(resInfo.usedVirtualMem);
-    memcpy(&resInfo.totalVirtualMem, data.data() + j, sizeof(resInfo.totalVirtualMem));
-    j += sizeof(resInfo.totalVirtualMem);
-    memcpy(&resInfo.usedPhysMem, data.data() + j, sizeof(resInfo.usedPhysMem));
-    j += sizeof(resInfo.usedPhysMem);
-    memcpy(&resInfo.totalPhysMem, data.data() + j, sizeof(resInfo.totalPhysMem));
-    j += sizeof(resInfo.totalPhysMem);
-    memcpy(&resInfo.procLoad, data.data() + j, sizeof(resInfo.procLoad));
-    j += sizeof(resInfo.procLoad);
-
-    return;
-}
-
-
-void printComputers()
-{
-    system("cls");
-
-    int num = 1;
-
-    fmt::print(fmt::emphasis::bold,
-    "{:^3} {:<20} {:>15} {:>15} {:>4}\n",
-    "№", "Имя компьютера", "Вирт. память", "Физ. память", "CPU");
-
-    fmt::print("{:=<3} {:=<20} {:=>15} {:=>15} {:=>4}\n", "", "", "", "", "");
-
-    for (const auto& x : users) {
-
-        fmt::print("{:2}. {:20} {:>5.1f} / {:4.1f} ГБ {:>5.1f} / {:4.1f} ГБ {:3}%\n",
-        num++, x.name,
-        double(x.resInfo.usedVirtualMem) / (1024 * 1024), double(x.resInfo.totalVirtualMem) / (1024 * 1024),
-        double(x.resInfo.usedPhysMem) / (1024 * 1024), double(x.resInfo.totalPhysMem) / (1024 * 1024),
-        x.resInfo.procLoad);
-    }
-    return;
-}
-
-void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
-{
-
-    user* uref = std::any_cast <user*> (cl.ref);
-    if (uref->name == "") {
-        for (const auto& x : data) {
-            uref->name.push_back(x);
-        }
-        system("cls");
-
-        printComputers();
-
-    }
-    else {
-        uref->resInfo.procs.clear();
-        uint32_t j = 0;
-        bytesToResInfo(uref->resInfo, data, j);
-
-        // for (const auto &x : uref->resInfo.procs) {
-        //     fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
-        // }
-
-        // fmt::print("Physical memory used: {:.3} / {:.3} GB\n",
-        //  double(uref->resInfo.usedPhysMem) / (1024 * 1024), double(uref->resInfo.usedPhysMem) / (1024 * 1024));
-        // fmt::print("Virtual memory used: {:.3} / {:.3} GB\n",
-        //  double(uref->resInfo.usedVirtualMem) / (1024 * 1024), double(uref->resInfo.totalVirtualMem) / (1024 * 1024));
-        // fmt::print("Processor load: {}%\n", uref->resInfo.procLoad);
-        //printProcesses();
-        printComputers();
-
-
-    }
-    return;
-}
-
-void disconn_handler(UServer::Client& cl)
-{
-    user* uref = std::any_cast <user*> (cl.ref);
-
-    cl.ref = nullptr;
-
-    //удаление отсоединившегося
-    auto x = find(users.begin(), users.end(), *uref);
-    users.erase(x);
-    nUsers--;
-
-    printComputers();
-
-    return;
-}
-
-void conn_handler(UServer::Client& cl)
-{
-    users.push_back({"", &cl});
-    cl.ref = &users.back();
-    nUsers++;
-
-    std::string s;
-    s = "[server] Succesfully connected";
-    cl.sendPacket(s);
-    return;
-
-}
 
 void printProcesses(uint32_t num)
 {
@@ -206,19 +87,215 @@ void printProcesses(uint32_t num)
     fmt::print("Processor load: {}%\n", user->resInfo.procLoad);
 }
 
-int main()
+void printComputersToJson()
 {
+    int i = 0;
+    for (const auto& x : users) {
+        dataJson["computers"][i]["name"] = x.name;
+        dataJson["computers"][i]["totVirtMem"] = x.resInfo.totalVirtualMem;
+        dataJson["computers"][i]["totPhysMem"] = x.resInfo.totalPhysMem;
+        dataJson["computers"][i]["IP"] = x.IP;
+        dataJson["computers"][i]["status"] = int(x.status);
+
+        i++;
+    }
+
+    fout.open("data.json");
+    fout << setw(4) << dataJson;
+    fout.close();
+    return;
+}
+
+
+void printComputers()
+{
+    system("cls");
+
+    int num = 1;
+
+    fmt::print(fmt::emphasis::bold,
+    "{:^3} {:<20} {:^15} {:>15} {:>15} {:>4} {:>10}\n",
+    "№", "Имя компьютера", "IP", "Вирт. память", "Физ. память", "CPU", "Статус");
+
+    fmt::print("{:=<3} {:=<20} {:=>15} {:=>15} {:=>15} {:=>4} {:=>10}\n", "", "", "", "", "", "", "");
+
+    for (const auto& x : users) {
+
+        fmt::print("{:2}. {:20} {:^15} {:>5.1f} / {:4.1f} ГБ {:>5.1f} / {:4.1f} ГБ {:3}% ",
+            num++, x.name, x.IP,
+            double(x.resInfo.usedVirtualMem) / (1024 * 1024), double(x.resInfo.totalVirtualMem) / (1024 * 1024),
+            double(x.resInfo.usedPhysMem) / (1024 * 1024), double(x.resInfo.totalPhysMem) / (1024 * 1024),
+            x.resInfo.procLoad);
+
+        switch (x.status)
+        {
+        case user::Status::connected:
+            fmt::print(fg(fmt::color::green), "{:>10}\n", "В СЕТИ");
+            break;
+        case user::Status::disconnected:
+            fmt::print(fg(fmt::color::red), "{:>10}\n", "НЕ В СЕТИ");
+            break;
+        default:
+            break;
+        }
+
+    }
+    return;
+}
+
+void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
+{
+
+    user* uref = std::any_cast <user*> (cl.ref);
+    if (uref->name == "") {
+        for (const auto& x : data) {
+            if (x == '-' or ('A' <= x and x <= 'Z') or ('a' <= x and x <= 'z') or ('0' <= x and x <= '9'))
+                uref->name.push_back(x);
+        }
+        if (uref->name.empty()) {
+            uref->name = "Безымянный";
+        }
+
+        printComputers();
+        printComputersToJson();
+    }
+    else {
+        uref->resInfo.procs.clear();
+        uint32_t j = 0;
+        //bytesToResInfo(uref->resInfo, data, j);
+        std::error_code ec;
+
+        uref->resInfo = alpaca::deserialize<SystemResInfo>(data, ec);
+
+        // for (const auto &x : uref->resInfo.procs) {
+        //     fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
+        // }
+
+        // fmt::print("Physical memory used: {:.3} / {:.3} GB\n",
+        //  double(uref->resInfo.usedPhysMem) / (1024 * 1024), double(uref->resInfo.usedPhysMem) / (1024 * 1024));
+        // fmt::print("Virtual memory used: {:.3} / {:.3} GB\n",
+        //  double(uref->resInfo.usedVirtualMem) / (1024 * 1024), double(uref->resInfo.totalVirtualMem) / (1024 * 1024));
+        // fmt::print("Processor load: {}%\n", uref->resInfo.procLoad);
+        //printProcesses();
+        printComputers();
+        if (uref->noData) {
+            uref->noData = false;
+            printComputersToJson();
+        }
+
+
+    }
+    return;
+}
+
+void disconn_handler(UServer::Client& cl)
+{
+    if (!cl.ref.has_value()) return;
+    user* uref = std::any_cast <user*> (cl.ref);
+
+    cl.ref = nullptr;
+
+    //удаление отсоединившегося
+    auto x = find(users.begin(), users.end(), *uref);
+
+    x->status = user::Status::disconnected;
+
+    //users.erase(x);
+    //nUsers--;
+
+    printComputers();
+    return;
+}
+
+void conn_handler(UServer::Client& cl)
+{
+    // user temp;
+
+    // temp.name = "";
+    // temp.IP = cl.getIPstr();
+    // temp.sock = &cl;
+    // temp.status = user::Status::connected;
+
+//    users.push_back(temp);
+
+    auto x = find_if(users.begin(), users.end(), [&](const user& a){return a.IP == cl.getIPstr();});
+
+
+    if (x != users.end()) {
+        if (x->status != user::Status::connected) {
+            x->status = user::Status::connected;
+            cl.ref = &(*x);
+        }
+        else {
+            server.disconnect(cl);
+        }
+    }
+    else {
+        user temp;
+
+        temp.name = "";
+        temp.IP = cl.getIPstr();
+        temp.sock = &cl;
+        temp.status = user::Status::connected;
+
+        users.push_back(temp);
+        cl.ref = &users.back();
+    }
+
+    nUsers++;
+
+    std::string s;
+    s = "[server] Succesfully connected";
+    cl.sendPacket(s);
+
+    //printComputersToJson();
+
+
+
+    return;
+}
+
+
+
+
+int main(int argc, char *argv[])
+{
+
+    //std::setlocale(LC_ALL,"Russian");
+    //std::locale::global(std::locale("POSIX"));
+    //std::cout << "The default locale is " << std::locale().name() << '\n';
 
     #ifndef DEBUG
     std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
     #endif
+
+    //установить IP и порт из аргументов
+    if (argc > 1) {
+        std::string IP_Port = argv[1];
+        if (IP_Port.find(":") != string::npos) {
+            try {
+                server.setPort(stoul(IP_Port.substr(IP_Port.find(":")+1, IP_Port.size())));
+            }
+            catch (std::exception) {
+                fmt::print("Неправильный порт\n");
+                return 1;
+            }
+            server.setIP(IP_Port.substr(0, IP_Port.find(":")));
+        }
+        else {
+            server.setIP(IP_Port.substr(0, IP_Port.find(":")));
+        }
+    }
 
     server.setDataHandler(data_handler);
     server.setDisconnHandler(disconn_handler);
     server.setConnHandler(conn_handler);
     server.run();
 
-    fmt::print("[server] Server started working\n");
+    if (server.getStatus() == UServer::status::up) fmt::print("[server] Сервер запущен\n");
+    else {
+        return 1;
+    }
 
     std::string s;
 
@@ -229,6 +306,6 @@ int main()
     } while (s != ":stop");
 
     server.stop();
-    std::cout << "[server] Server stopped working" << std::endl;
+    std::cout << "[server] Сервер остановлен" << std::endl;
     return 0;
 }

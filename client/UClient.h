@@ -43,7 +43,7 @@ public:
     status getStatus();
 
     //типы буферов данных
-    using DataBuffer = std::vector <char>;
+    using DataBuffer = std::vector <unsigned char>;
     using DataBufferStr = std::string;
 
     //тип обработчика данных

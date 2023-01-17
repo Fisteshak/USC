@@ -6,6 +6,7 @@
 #include <vector>
 #include <functional>
 #include <any>
+#include <string>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -22,7 +23,7 @@ class UServer
 
 public:
     //тип буфера для данных
-    using DataBuffer = std::vector <char>;
+    using DataBuffer = std::vector <unsigned char>;
     using DataBufferStr = std::string;
     class Client;
 
@@ -36,14 +37,13 @@ private:
 public:
 
     enum status : uint8_t {
-        up = 0,
-        stopped = 1,
-        connected = 7,
-        error_listener_create = 2,
-        error_accept_connection = 3,
-        error_winsock_init = 5,
-        error_wsapoll = 6,
-        error = 4
+        up,
+        stopped,
+        error_listener_create,
+        error_accept_connection,
+        error_winsock_init,
+        error_wsapoll,
+        error
     };
 
     //конструктор с указанием
@@ -51,6 +51,10 @@ public:
     //порта
     //максимального кол-ва соединенией (опционально)
     UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections = 100);
+    //конструктор с указанием
+    //порта
+    //максимального кол-ва соединенией (опционально)
+    UServer(int listenerPort, uint32_t nMaxConnections = 100);
     UServer() {};
     //деструктор
     ~UServer();
@@ -76,14 +80,26 @@ public:
     status getStatus();
     //получить порт
     uint32_t getPort();
-    //массив клиентов
-    //каждый элемент соответствует элементу fds с тем же индексом
-    std::vector <Client> clients;
+    //установить IP
+    //IP не будет изменен, если сервер работает в данный момент времени (getStatus() == status::up)
+    //возвращает true при успехе, false при неудаче
+    bool setIP(const std::string& IP);
+    //установить порт
+    //порт не будет изменен, если сервер работает в данный момент времени (getStatus() == status::up)
+    //возвращает true при успехе, false при неудаче
+    bool setPort(const uint32_t& port);
+    void disconnect(Client& cl);
+
+
     //количество текущих подключенных соединений (включая сокет listener)
     uint32_t nConnections = 0;
 
+
 private:
 
+    //массив клиентов
+    //каждый элемент соответствует элементу fds с тем же индексом
+    std::vector <Client> clients;
     //завершить все потоки
     void joinThreads();
     //Инициализирует сетевой интерфейс для сокетов.
@@ -194,6 +210,12 @@ public:
     UServer::Client::status sendPacket(const DataBuffer& data);
     //отправить пакет данных
     UServer::Client::status sendPacket(const DataBufferStr& data);
+
+    //получить IP клиента в виде строки
+    std::string getIPstr();
+    //получить IP клиента в виде числа
+    uint32_t getIP();
+
 
     void disconnect();
 private:
