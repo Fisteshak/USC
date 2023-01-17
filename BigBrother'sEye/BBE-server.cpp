@@ -15,6 +15,7 @@
 
 #include <fmt/format.h>
 #include <fmt/color.h>
+#include <fmt/core.h>
 #include <nlohmann/json.hpp>
 #include <alpaca/alpaca.h>
 
@@ -29,9 +30,9 @@ UServer server(9554, 50);
 
 struct process
 {
-    string exeName;
-    uint32_t ID;
-    uint64_t memoryUsage; //в КБ
+    string exeName = "";
+    uint32_t ID = 0;
+    uint64_t memoryUsage = 0; //в КБ
 };
 
 struct SystemResInfo {
@@ -48,13 +49,17 @@ struct user{
     std::string IP = "";
     UServer::Client* sock;
     SystemResInfo resInfo;
-    bool noData = true;    //resInfo еще не пришли
-    bool operator==(const user &a) {
-        return (a.sock == sock and a.name == name);
-    }
+
     enum Status {
         connected, disconnected
     } status = disconnected;
+
+    bool noResInfo = true;    //resInfo еще не пришли
+    bool noName = true;       //имя еще не пришло
+
+    bool operator==(const user &a) {
+        return (a.sock == sock and a.name == name);
+    }
 };
 
 enum Mode {
@@ -95,14 +100,35 @@ void printComputersToJson()
         dataJson["computers"][i]["totVirtMem"] = x.resInfo.totalVirtualMem;
         dataJson["computers"][i]["totPhysMem"] = x.resInfo.totalPhysMem;
         dataJson["computers"][i]["IP"] = x.IP;
-        dataJson["computers"][i]["status"] = int(x.status);
-
         i++;
     }
 
     fout.open("data.json");
     fout << setw(4) << dataJson;
     fout.close();
+    return;
+}
+
+
+void scanComputersFromJson()
+{
+    ifstream fin("data.json")   ;
+    if (!fin.is_open()) return;
+
+    fin >> dataJson;
+
+    users.resize(dataJson["computers"].size());
+    int i = 0;
+    for (auto& x : users) {
+        x.IP = dataJson["computers"][i]["IP"];
+        x.name = dataJson["computers"][i]["name"];
+        x.resInfo.totalVirtualMem =  dataJson["computers"][i]["totVirtMem"];
+        x.resInfo.totalPhysMem =  dataJson["computers"][i]["totPhysMem"];
+        i++;
+    }
+
+    fin.close();
+
     return;
 }
 
@@ -147,7 +173,9 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 {
 
     user* uref = std::any_cast <user*> (cl.ref);
-    if (uref->name == "") {
+    if (uref->noName) {
+        uref->noName = false;
+        uref->name.clear();
         for (const auto& x : data) {
             if (x == '-' or ('A' <= x and x <= 'Z') or ('a' <= x and x <= 'z') or ('0' <= x and x <= '9'))
                 uref->name.push_back(x);
@@ -156,8 +184,8 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
             uref->name = "Безымянный";
         }
 
-        printComputers();
-        printComputersToJson();
+        //printComputers();
+        //printComputersToJson();
     }
     else {
         uref->resInfo.procs.clear();
@@ -178,8 +206,8 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
         // fmt::print("Processor load: {}%\n", uref->resInfo.procLoad);
         //printProcesses();
         printComputers();
-        if (uref->noData) {
-            uref->noData = false;
+        if (uref->noResInfo) {
+            uref->noResInfo = false;
             printComputersToJson();
         }
 
@@ -225,6 +253,9 @@ void conn_handler(UServer::Client& cl)
         if (x->status != user::Status::connected) {
             x->status = user::Status::connected;
             cl.ref = &(*x);
+            user* uref = std::any_cast <user*> (cl.ref);
+            uref->sock = &cl;
+
         }
         else {
             server.disconnect(cl);
@@ -269,6 +300,8 @@ int main(int argc, char *argv[])
     std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
     #endif
 
+    scanComputersFromJson();
+    printComputers();
     //установить IP и порт из аргументов
     if (argc > 1) {
         std::string IP_Port = argv[1];
