@@ -291,8 +291,8 @@ int main(int argc, char *argv[])
     server.setConnHandler(conn_handler);
     server.run();
 
-    if (server.getStatus() == UServer::status::up) fmt::print("[server] Сервер запущен\n");
-    else {
+    if (server.getStatus() != UServer::status::up)
+    {
         return 1;
     }
 
