@@ -5,6 +5,7 @@
 #include <vector>
 #include <any>
 #include <algorithm>
+#include <chrono>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -83,7 +84,9 @@ Socket UServer::createListener()
 {
     //создать сокет
     Socket listener = socket(AF_INET, SOCK_STREAM, 0);
-    if (listener == INVALID_SOCKET) return INVALID_SOCKET;
+    if (listener == INVALID_SOCKET) {
+        return INVALID_SOCKET;
+    }
 
     //позволяет системе использовать только что закрытое соединение
     //(например в случае быстрого перезапуска программы)
@@ -333,16 +336,6 @@ void UServer::handlingLoop()
                 int packetSize;		//количество прочитанных байт
 				packetSize = recvPacket(clients[i], data_buf);
 
-                // получить 4 байта длины
-                // char dataLenArr[4]{};
-                // int recievedDataLen = recvAll(clients[i].fd, dataLenArr, 4);
-
-                // int dataLen = *(int*)dataLenArr;
-                // data_buf.resize(dataLen);
-                // std::cout << "Message size is " << dataLen << std::endl;
-
-                // recievedDataLen = recvAll(clients[i].fd, data_buf.data(), dataLen);
-
                 //если мы успешно прочитали данные
                 if (packetSize > 0) {
                     if (dataHandler) {
@@ -405,7 +398,6 @@ UServer::status UServer::run()
     this->listener = listener;
 
 	if (listener == INVALID_SOCKET) {
-		std::cout << "create listener error" << std::endl;
 		return _status = error_listener_create;
 	}
 	//запустить поток обработки входящих сообщений
@@ -558,8 +550,7 @@ void UServer::sendPacket(const DataBuffer& data)
             int err = clients[i].sendPacket(data);
 
             if (err < 0) {
-                std::cout << "Error sending data to Socket №" << fds[i].fd << std::endl;
-                std::cout << "Error №" << WSAGetLastError() << std::endl;
+                clients[i]._status = UServer::Client::status::error_send_data;
             }
 
             handledConnections++;
@@ -575,12 +566,11 @@ void UServer::sendPacket(const DataBufferStr& data)
     for (int i = 1; handledConnections < nConnections; i++) {
         if (fds[i].fd != 0) {
 
-            clients[i].sendPacket(data);
+            int err = clients[i].sendPacket(data);
 
-            // if (err < 0) {
-            //     std::cout << "Error sending data to Socket №" << fds[i].fd << std::endl;
-            //     std::cout << "Error №" << WSAGetLastError() << std::endl;
-            // }
+            if (err < 0) {
+                clients[i]._status = UServer::Client::status::error_send_data;
+            }
 
             handledConnections++;
         }
@@ -678,10 +668,9 @@ UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
 
 UServer::Client::~Client()
 {
-    //closesocket(this->fd);
-//     int clientInd = std::find(owner->clients.begin(), owner->clients.end(), *this) - owner->clients.begin();
-//     owner->closeConnection(clientInd);
+
 }
+
 
 /*
 ⠄⠄⣿⣿⣿⣿⠘⡿⢛⣿⣿⣿⣿⣿⣧⢻⣿⣿⠃⠸⣿⣿⣿⠄⠄⠄⠄⠄

@@ -22,7 +22,6 @@ bool UClient::initWinsock()
     WORD ver = MAKEWORD(2, 2);
     if (WSAStartup(ver, &wsaData) != 0)
     {
-        std::cout << "Error: can't initialize winsock!" << getLastError();
         return false;
     }
     return true;
@@ -114,12 +113,6 @@ void UClient::disconnect()
     }
 }
 
-// void UClient::pause()
-// {
-//     _status == status::paused;
-//     return;
-// }
-
 void UClient::recvHandlingLoop()
 {
     DataBuffer dataBuf;
@@ -127,7 +120,6 @@ void UClient::recvHandlingLoop()
         //получить данные
 
         int messageSize = recvPacket(dataBuf);
-        //std::cout << "Message size is " << messageSize << std::endl;
         if (_status != status::connected) {
             break;
         }
@@ -202,7 +194,6 @@ int UClient::recvAll(char* data, const int len) {
     while (total < len) {
         received = recv(clientSocket, data + total, len - total, 0);
         if (received == SOCKET_ERROR) {
-            //std::cout << "Error recieving data " << getLastError() << std::endl;
             return SOCKET_ERROR;
         }
         if (received == 0) {
