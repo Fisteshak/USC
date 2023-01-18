@@ -90,7 +90,6 @@ public:
     bool setPort(const uint32_t& port);
     void disconnect(Client& cl);
 
-
     //количество текущих подключенных соединений (включая сокет listener)
     uint32_t nConnections = 0;
 
@@ -160,6 +159,12 @@ private:
     //обработчик отключения соединения
     ConnHandler disconnHandler;
 
+    //crypto
+    bool CRYPTO_ENABLED = true;
+    uint32_t AESKeyLength = 128;
+    uint32_t RSAKeyLength = 4096;
+    std::vector <tbyte> AESKey;
+
 };
 
 class UServer::Client
@@ -219,6 +224,14 @@ public:
 
     void disconnect();
 private:
+
+    void initCrypto(int sock,  int AESKeyLength); // RSAKeyLength
+
+    // crypto
+    uint32_t AESKeyLength;
+    uint32_t RSAKeyLength;
+    std::vector<tbyte> AESKey;
+
     //дескриптор сокета
     Socket fd;
     //статус

@@ -289,7 +289,7 @@ void server_session(int sock, tbyte* result_key, int len){
 
 }
 
-// sock - socket, result_key - pointer, len - size of AES key
+// sock - socket, result_key - pointer, len - size of AES key in bytes
 void client_session(int sock, tbyte* result_key, int len){
 
     gint e, n;

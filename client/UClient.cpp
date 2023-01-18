@@ -4,6 +4,8 @@
 #include <WS2tcpip.h>
 #include "windows.h"
 
+
+#include "../crypto/key_exchg.h"
 #include "UClient.h"
 
 UClient::UClient()
@@ -60,6 +62,13 @@ UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
         if (connHandler) {
             connHandler();
         }
+        // crypto client begin
+
+
+
+        //start_client(clientSocket, key, 16);
+
+        // crypto client end
         recvHandlingLoopThread = std::thread(&UClient::recvHandlingLoop, this);
 
     }

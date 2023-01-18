@@ -14,6 +14,7 @@
 
 #include "UServer.h"
 #include "../crypto/aes.h"
+#include "../crypto/key_exchg.h"
 
 UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
@@ -27,6 +28,8 @@ UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnecti
 
     fds.resize(this->nMaxConnections);
     clients.resize(this->nMaxConnections);
+
+    AESKey.assign(AESKeyLength, 0);
 
     return;
 }
@@ -44,6 +47,8 @@ UServer::UServer(int listenerPort, uint32_t nMaxConnections) : listenerPort(list
     fds.resize(this->nMaxConnections);
     clients.resize(this->nMaxConnections);
     listenerIP.clear();
+
+    AESKey.assign(AESKeyLength, 0);
 
     return;
 }
@@ -296,7 +301,6 @@ void UServer::handlingLoop()
                         }
                         break;
                     }
-
                     //перевести сокет в блокирующий режим
                     DWORD Blocking = 0;
                     if (ioctlsocket(new_conn, FIONBIO, &Blocking) < 0) {
@@ -307,7 +311,14 @@ void UServer::handlingLoop()
                     //добавить в массив соединений
                     int newConnInd = addConnection(new_conn);
 
+                    //
+                    if (CRYPTO_ENABLED)
+                    {
+                        start_server(clients[newConnInd].fd, AESKey.data(), AESKeyLength / 8);
+                        clients[newConnInd].initCrypto();
 
+                    }
+                    //
 
                     if (connHandler) {
                         connHandler(clients[newConnInd]);
