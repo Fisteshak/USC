@@ -280,7 +280,7 @@ void ggint_div_gint( gint a,  gint b, gint q, gint r)
 void ggint_mod_gint2( gint a,  gint b, gint r)
 {
     gint q;
-    if (b[GInt_Size-1] & 0x80)         // если отрицательное 
+    if (b[GInt_Size-1] & 0x80)         // если отрицательное
     {
         ggint_negative_to_positive(b); // то сначала посчитаем
         ggint_div_gint(a,b,q,r);       // для положительного
@@ -382,8 +382,8 @@ void my_ggint_rand(gint a, int nbits)
     size_t i = 0;
     for (i = 0; i < nbytes - 1; i++)
         a[i] = rand() % GInt_Base;
-        
-    while (a[nbytes - 1] == 0) 
+
+    while (a[nbytes - 1] == 0)
         a[nbytes - 1] = rand() % GInt_Base;
 }
 
@@ -446,7 +446,7 @@ void ggint_print_format( const char * pref, gint x, bool printBytes)
         printf("   %16s : ", "Decimal");
     else
         ;//printf(" - %16s : ", pref);
-        
+
     while (ggint_is_zero(x) == false)
     {
         ggint_div_gint(_10, x, q, r);

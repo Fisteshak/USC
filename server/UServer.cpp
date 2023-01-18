@@ -81,8 +81,6 @@ void UServer::cleanupWinsock()
 // создает сокет-слушатель
 Socket UServer::createListener()
 {
-
-
     //создать сокет
     Socket listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener == INVALID_SOCKET) return INVALID_SOCKET;

@@ -6,13 +6,17 @@
 
 // network
 #include <iostream>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+// #include <sys/types.h>
+// #include <sys/socket.h>
+// #include <netinet/in.h>
+// #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
 #include <string>
+
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include "windows.h"
 
 #include <fstream>
 
@@ -28,7 +32,7 @@ int sendall(int s, tbyte* buf, int len, int flags)
 
     while(total < len)
     {
-        n = send(s, buf+total, len-total, flags);
+        n = send(s, (char*)buf+total, len-total, flags);
         if(n == -1) { break; }
         total += n;
     }
@@ -41,7 +45,7 @@ int recvall(int sock, tbyte* buf, int len, int flags){
     int received;
 
     while (total < len){
-        received = recv(sock, buf + total, len - total, 0);
+        received = recv(sock, (char*)buf + total, len - total, 0);
         if (received == -1){
             perror("Can't receive buffer\n0");
             break;
@@ -51,7 +55,7 @@ int recvall(int sock, tbyte* buf, int len, int flags){
             return -1;
         }
         total += received;
-    }   
+    }
     return 0;
 }
 
@@ -66,8 +70,8 @@ void gcd_ext(gint a, gint b, gint x, gint y, gint d){
     }
     gint x1, y1, q, r, p, tmp;
     ggint_mod_gint2(b, a, r);   // r = a%b
-    gcd_ext(b, r, x1, y1, d);   
-    
+    gcd_ext(b, r, x1, y1, d);
+
     // x = y1;
     ggint_set_gint(x, y1);
 
@@ -95,7 +99,7 @@ void pow_1(gint a, gint m, gint res){
         gint tmp1, tmp2;
 
         ggint_mod_gint2(m, x, tmp1);     // tmp1 = x % m
-        
+
         ggint_add_gint(m, tmp1);         // tmp1 = tmp1 + m
 
         ggint_mod_gint2(m, tmp1, tmp2);  // tmp2 = tmp1 % m
@@ -141,7 +145,7 @@ void generate_RSA_keys(gint e_, gint d_, gint n_){
 
     // d = e^(-1) mod phi(n)
     ggint_zero(d_);
-    pow_1(e_, phi, d_);    
+    pow_1(e_, phi, d_);
 }
 
 
@@ -181,16 +185,16 @@ void read_RSA_keys_from_file(const std::string &filename, int size_of_edn, gint 
         throw std::invalid_argument("The size you want to read doesn't match to real\n");
         return;
     }
-    
+
     inp.read((char *) e, size_of_edn);
     inp.read((char *) d, size_of_edn);
     inp.read((char *) n, size_of_edn);
-    
+
     inp.close();
 }*/
 
 void write_RSA_keys_to_file(const std::string &filename, int size_of_edn, gint e, gint d, gint n){
-    
+
     if (size_of_edn != GInt_Size){
         std::cerr << "The size you want to write doesn't match to `GInt_Size`\n";
         return;
@@ -213,7 +217,7 @@ void get_RSA_keys(const std::string &filename, int size_of_edn, gint e, gint d, 
     //read_RSA_keys_from_file("RSA.bin", RSA_KEY_LENGTH, e_res, d_res, n_res);
 
     if (size_of_edn / 4 != GInt_Size){
-        
+
         std::cout <<"The size you want to read doesn't match to `GInt_Size`\n";
         return;
     }
@@ -230,17 +234,17 @@ void get_RSA_keys(const std::string &filename, int size_of_edn, gint e, gint d, 
         write_RSA_keys_to_file("RSA.bin", GInt_Size, e, d, n);
         return;
     }
-    
+
 
     if (inp_size != GInt_Size){
         std::cout << "The size you want to read doesn't match to real\n";
         return;
     }
-    
+
     inp.read((char *) e, size_of_edn);
     inp.read((char *) d, size_of_edn);
     inp.read((char *) n, size_of_edn);
-    
+
     inp.close();
 
         // std::cout << "Can't find RSA.bin\n";
@@ -248,7 +252,7 @@ void get_RSA_keys(const std::string &filename, int size_of_edn, gint e, gint d, 
         // generate_RSA_keys(e_res, d_res, n_res);
         // std::cout << "Writing keys to a file \"RSA_keys.bin\" ...\n";
         // write_RSA_keys_to_file("RSA_keys.bin", GInt_Size, e_res, d_res, n_res);
-    
+
 
 }
 
@@ -258,7 +262,7 @@ void get_RSA_keys(const std::string &filename, int size_of_edn, gint e, gint d, 
 
 
 void server_session(int sock, tbyte* result_key, int len){
-    
+
     // send our public key
     tbyte* buf = new tbyte[GInt_Size*2];
     int cnt = 0;
@@ -291,7 +295,7 @@ void client_session(int sock, tbyte* result_key, int len){
     gint e, n;
     tbyte* buf = new tbyte[GInt_Size*2];
 
-    // recv servers' public key 
+    // recv servers' public key
     recvall(sock, buf, GInt_Size*2, 0);
     int cnt = 0;
     for (int i = 0; i < GInt_Size; i++){
@@ -306,7 +310,7 @@ void client_session(int sock, tbyte* result_key, int len){
     // generate AES key
     for (int i = 0; i < len; i++)
         result_key[i] = rand() & 0xFF;
-    
+
     // encrypt AES key
     gint m, c;
     ggint_zero(m);
@@ -360,8 +364,8 @@ void alice_session(int sock, tbyte* result_key, int len){
         cnt++;
     }
     sendall(sock, buf, GInt_Size*2, 0);
-    
-    
+
+
     // recv Bob's public key
     recvall(sock, buf, GInt_Size*2, 0);
     cnt = 0;
@@ -377,7 +381,7 @@ void alice_session(int sock, tbyte* result_key, int len){
     // generate AES key
     for (int i = 0; i < len; i++)
         result_key[i] = rand() & 0xFF;
-    
+
 
     // encrypt AES key
     gint m, c;
@@ -413,8 +417,8 @@ void bob_session(int sock, tbyte* result_key, int len){
         cnt++;
     }
     sendall(sock, buf, GInt_Size*2, 0);
-    
-    
+
+
     // recv Alice's public key
     recvall(sock, buf, GInt_Size*2, 0);
     cnt = 0;
@@ -437,6 +441,6 @@ void bob_session(int sock, tbyte* result_key, int len){
     RSA_decrypt(enc_key, my_d, my_n, key);
     for (int i = 0; i < len; i++)
         result_key[i] = key[i];
-    
+
 }
 */
