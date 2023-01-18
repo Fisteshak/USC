@@ -184,8 +184,6 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
             uref->name = "Безымянный";
         }
 
-        //printComputers();
-        //printComputersToJson();
     }
     else {
         uref->resInfo.procs.clear();
@@ -195,16 +193,6 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 
         uref->resInfo = alpaca::deserialize<SystemResInfo>(data, ec);
 
-        // for (const auto &x : uref->resInfo.procs) {
-        //     fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
-        // }
-
-        // fmt::print("Physical memory used: {:.3} / {:.3} GB\n",
-        //  double(uref->resInfo.usedPhysMem) / (1024 * 1024), double(uref->resInfo.usedPhysMem) / (1024 * 1024));
-        // fmt::print("Virtual memory used: {:.3} / {:.3} GB\n",
-        //  double(uref->resInfo.usedVirtualMem) / (1024 * 1024), double(uref->resInfo.totalVirtualMem) / (1024 * 1024));
-        // fmt::print("Processor load: {}%\n", uref->resInfo.procLoad);
-        //printProcesses();
         printComputers();
         if (uref->noResInfo) {
             uref->noResInfo = false;
@@ -237,15 +225,6 @@ void disconn_handler(UServer::Client& cl)
 
 void conn_handler(UServer::Client& cl)
 {
-    // user temp;
-
-    // temp.name = "";
-    // temp.IP = cl.getIPstr();
-    // temp.sock = &cl;
-    // temp.status = user::Status::connected;
-
-//    users.push_back(temp);
-
     auto x = find_if(users.begin(), users.end(), [&](const user& a){return a.IP == cl.getIPstr();});
 
 
@@ -281,25 +260,12 @@ void conn_handler(UServer::Client& cl)
 
     //printComputersToJson();
 
-
-
     return;
 }
 
 
-
-
 int main(int argc, char *argv[])
 {
-
-    //std::setlocale(LC_ALL,"Russian");
-    //std::locale::global(std::locale("POSIX"));
-    //std::cout << "The default locale is " << std::locale().name() << '\n';
-
-    #ifndef DEBUG
-    std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
-    #endif
-
     scanComputersFromJson();
     printComputers();
     //установить IP и порт из аргументов

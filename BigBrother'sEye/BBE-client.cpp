@@ -102,9 +102,6 @@ process getProcessInfo(const DWORD processID)
         }
     }
 
-    // Print the process name and identifier.
-
-    //_tprintf(TEXT("%s  (PID: %u)  %u\n"), szProcessName, processID, pmc.WorkingSetSize / 1024);
 
     // Release the handle to the process.
 
@@ -171,9 +168,6 @@ int32_t getProcesses(vector<process> &processes)
 
         i++;
 
-        // printf("ProcessID= %d\n", pe32.th32ProcessID);
-        // printf("ExeFile= %s\n", pe32.szExeFile);
-        // printf("Memory usage= %d\n\n", pmc.PrivateUsage);
     } while (Process32Next(hProcessSnap, &pe32));
 
     CloseHandle(hProcessSnap);
@@ -260,10 +254,10 @@ int main(int argc, char *argv[])
 
     client.connectTo(IP, port);
 
-    // if (client.getStatus() != UClient::status::connected) {
-    //     std::cout << "Failed to connect to a server\n";
-    //     return 0;
-    // }
+    if (client.getStatus() != UClient::status::connected) {
+        std::cout << "Failed to connect to a server\n";
+        return 0;
+    }
 
     string name = GetComputerName();
     client.sendPacket(name);
@@ -285,10 +279,10 @@ int main(int argc, char *argv[])
 
         client.sendPacket(buf);
 
-        for (const auto &x : resInfo.procs) {
-            fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
-        }
-
+        // for (const auto &x : resInfo.procs) {
+        //     fmt::print("ID: {:<10} Name: {:<40} Mem: {:8.1f} MB\n", x.ID, x.exeName, double(x.memoryUsage) / 1024);
+        // }
+        system("cls");
         fmt::print("Physical memory used: {:.3} / {:.3} GB\n",
          double(resInfo.usedPhysMem) / (1024 * 1024), double(resInfo.usedPhysMem) / (1024 * 1024));
         fmt::print("Virtual memory used: {:.3} / {:.3} GB\n",
