@@ -50,7 +50,10 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
 
         UServer::DataBufferStr data2 = uref->name;
         data2 += ": ";
-        data2 += data.data();
+
+        for (const auto &x : data) {
+            data2.push_back(x);
+        }
 
         for (const auto& x : users) {
             if (*(x.sock) != cl)
