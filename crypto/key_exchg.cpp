@@ -23,7 +23,7 @@
 using namespace std;
 using tbyte = unsigned char;
 
-gint e_main, d_main, n_main;
+
 
 int sendall(int s, tbyte* buf, int len, int flags)
 {
@@ -216,6 +216,9 @@ void get_RSA_keys(const std::string &filename, int size_of_edn, gint e, gint d, 
 
     //read_RSA_keys_from_file("RSA.bin", RSA_KEY_LENGTH, e_res, d_res, n_res);
 
+
+
+
     if (size_of_edn / 4 != GInt_Size){
 
         std::cout <<"The size you want to read doesn't match to `GInt_Size`\n";
@@ -261,7 +264,7 @@ void get_RSA_keys(const std::string &filename, int size_of_edn, gint e, gint d, 
 
 
 
-void server_session(int sock, tbyte* result_key, int len){
+void start_server(int sock, tbyte* result_key, int len, gint e_main, gint d_main, gint n_main){
 
     // send our public key
     tbyte* buf = new tbyte[GInt_Size*2];
@@ -289,9 +292,8 @@ void server_session(int sock, tbyte* result_key, int len){
 
 }
 
-// sock - socket, result_key - pointer, len - size of AES key in bytes
-void client_session(int sock, tbyte* result_key, int len){
-
+// sock - socket, result_key - pointer, len - size of AES key in byte
+void start_client(int sock, tbyte* result_key, int len){
     gint e, n;
     tbyte* buf = new tbyte[GInt_Size*2];
 
@@ -322,19 +324,8 @@ void client_session(int sock, tbyte* result_key, int len){
     sendall(sock, c, GInt_Size, 0);
 }
 
-void start_server(int sock, tbyte* res_key, int len)
-{
-    ggint_zero(e_main);
-    ggint_zero(d_main);
-    ggint_zero(n_main);
-    get_RSA_keys("RSA.bin", RSA_KEY_LENGTH, e_main, d_main, n_main);
-    server_session(sock, res_key, len);
-}
 
-void start_client(int sock, tbyte* res_key, int len)
-{
-    client_session(sock, res_key, len);
-}
+
 
 
 

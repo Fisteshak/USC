@@ -20,6 +20,8 @@ using Socket = SOCKET;
 class UClient
 {
 public:
+    const static uint8_t CRYPTO_ENABLED = 0x1;
+
     enum status : uint8_t {
         disconnected = 1,
         connected,
@@ -30,7 +32,7 @@ public:
         error_recv_data
     };
 
-    UClient();
+    UClient(uint16_t flags = 0x0);
     ~UClient();
 
     //void pause();
@@ -106,5 +108,13 @@ private:
     std::atomic <status> _status = status::disconnected;
     std::thread recvHandlingLoopThread;
     Socket clientSocket;
+
+    // crypto
+
+    bool cryptoEnabled = false;
+    uint32_t AESKeyLength = 16;
+    uint32_t RSAKeyLength = 4096;
+    std::vector<tbyte> AESKey;
+
 
 };

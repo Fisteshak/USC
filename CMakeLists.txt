@@ -31,8 +31,11 @@ target_link_libraries(LibUServer ws2_32)
 target_link_libraries(LibUClient ws2_32 wtsapi32)
 
 # Гривовская
-# target_link_libraries(LibUServer GInt prime key_exchg aes)
-# target_link_libraries(LibUClient GInt prime key_exchg aes)
+target_link_libraries(key_exchg prime GInt)
+target_link_libraries(prime GInt key_exchg)
+
+target_link_libraries(LibUServer GInt prime key_exchg aes)
+target_link_libraries(LibUClient GInt prime key_exchg aes)
 
 target_link_libraries(BBE-server LibUServer fmt::fmt nlohmann_json::nlohmann_json alpaca)
 target_link_libraries(BBE-client LibUClient pdh.dll fmt::fmt alpaca)

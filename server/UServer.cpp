@@ -13,10 +13,14 @@
 #include <ciso646>
 
 #include "UServer.h"
+
 #include "../crypto/aes.h"
 #include "../crypto/key_exchg.h"
+#include "../crypto/GInt.h"
 
-UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort), listenerIP(listenerIP)
+
+
+UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections, uint8_t flags) : listenerPort(listenerPort), listenerIP(listenerIP)
 {
     if (nMaxConnections == 0) {
         throw std::runtime_error("nMaxConnections value should not be zero");
@@ -29,12 +33,21 @@ UServer::UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnecti
     fds.resize(this->nMaxConnections);
     clients.resize(this->nMaxConnections);
 
-    AESKey.assign(AESKeyLength, 0);
+    if (flags & CRYPTO_ENABLED) {
+        cryptoEnabled = true;
+        srand(time(0));
+
+        ggint_zero(e_main);
+        ggint_zero(d_main);
+        ggint_zero(n_main);
+        get_RSA_keys("RSA.bin", RSA_KEY_LENGTH, e_main, d_main, n_main);
+
+    }
 
     return;
 }
 
-UServer::UServer(int listenerPort, uint32_t nMaxConnections) : listenerPort(listenerPort)
+UServer::UServer(int listenerPort, uint32_t nMaxConnections, uint8_t flags) : listenerPort(listenerPort)
 {
     if (nMaxConnections == 0) {
         throw std::runtime_error("nMaxConnections value should not be zero");
@@ -48,7 +61,17 @@ UServer::UServer(int listenerPort, uint32_t nMaxConnections) : listenerPort(list
     clients.resize(this->nMaxConnections);
     listenerIP.clear();
 
-    AESKey.assign(AESKeyLength, 0);
+    if (flags & CRYPTO_ENABLED) {
+        cryptoEnabled = true;
+        srand(time(0));
+
+        ggint_zero(e_main);
+        ggint_zero(d_main);
+        ggint_zero(n_main);
+        get_RSA_keys("RSA.bin", RSA_KEY_LENGTH, e_main, d_main, n_main);
+
+    }
+
 
     return;
 }
@@ -312,12 +335,16 @@ void UServer::handlingLoop()
                     int newConnInd = addConnection(new_conn);
 
                     //
-                    // if (CRYPTO_ENABLED)
-                    // {
-                    //     start_server(clients[newConnInd].fd, AESKey.data(), AESKeyLength / 8);
-                    //     clients[newConnInd].initCrypto();
+                    if (cryptoEnabled)
+                    {
+                        // выработка общего ключа
 
-                    // }
+                        clients[newConnInd].initCrypto(clients[newConnInd].fd, AESKeyLength);
+                        // for (auto &x : clients[newConnInd].AESKey){
+                        //     printf("%.2x", x);
+                        // }
+                        // printf("\n");
+                    }
                     //
 
                     if (connHandler) {
@@ -383,6 +410,14 @@ void UServer::handlingLoop()
 	return;
 }
 
+//
+void UServer::Client::initCrypto(int sock,  int AESKeyLength){
+    // если уже запускали
+    AESKey.assign(AESKeyLength, 0);
+    start_server(sock, AESKey.data(), AESKeyLength, owner->e_main, owner->d_main, owner->n_main);
+    AESObj = new aes(128, CONST_AES_CBC);
+}
+
 
 //запускает сервер (цикл приема данных)
 UServer::status UServer::run()
@@ -419,10 +454,10 @@ UServer::status UServer::run()
 }
 
 /*
-При закрытии соединения оставляем пустое место,
-на которое позже запишется новое соединение.
-Менять местами элементы нельзя, т.к. это поломает
-ссылки на них со стороны пользователя.
+    При закрытии соединения оставляем пустое место,
+    на которое позже запишется новое соединение.
+    Менять местами элементы нельзя, т.к. это поломает
+    ссылки на них со стороны пользователя.
 */
 
 void UServer::closeConnection(const uint32_t connectionNum)
@@ -509,6 +544,7 @@ int UServer::recvAll(const Socket sock, char* data, const int len) {
         }
         total += received;
     }
+
 
     return total;
 }

@@ -11,6 +11,9 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include "windows.h"
+#include "../crypto/aes.h"
+#include "../crypto/key_exchg.h"
+#include "../crypto/GInt.h"
 
 using Socket = SOCKET;
 
@@ -36,8 +39,8 @@ private:
     using tbyte = uint8_t;
     using uint = unsigned int;
 
-
 public:
+    const static uint8_t CRYPTO_ENABLED = 0x1;
 
     enum status : uint8_t {
         up,
@@ -53,11 +56,11 @@ public:
     //IP
     //порта
     //максимального кол-ва соединенией (опционально)
-    UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections = 100);
+    UServer(std::string listenerIP, int listenerPort, uint32_t nMaxConnections = 100, uint8_t flags = 0x0);
     //конструктор с указанием
     //порта
     //максимального кол-ва соединенией (опционально)
-    UServer(int listenerPort, uint32_t nMaxConnections = 100);
+    UServer(int listenerPort, uint32_t nMaxConnections = 100, uint8_t flags = 0x0);
     UServer() {};
     //деструктор
     ~UServer();
@@ -163,10 +166,10 @@ private:
     ConnHandler disconnHandler;
 
     //crypto
-    bool CRYPTO_ENABLED = true;
-    uint32_t AESKeyLength = 128;
+    bool cryptoEnabled = false;
+    uint32_t AESKeyLength = 16;
     uint32_t RSAKeyLength = 4096;
-    std::vector <tbyte> AESKey;
+    gint e_main, d_main, n_main;
 
 };
 
@@ -231,9 +234,8 @@ private:
     void initCrypto(int sock,  int AESKeyLength); // RSAKeyLength
 
     // crypto
-    uint32_t AESKeyLength;
-    uint32_t RSAKeyLength;
     std::vector<tbyte> AESKey;
+    aes* AESObj;
 
     //дескриптор сокета
     Socket fd;

@@ -8,9 +8,14 @@
 #include "../crypto/key_exchg.h"
 #include "UClient.h"
 
-UClient::UClient()
+UClient::UClient(uint16_t flags)
 {
     initWinsock();
+    if (flags & CRYPTO_ENABLED) {
+        cryptoEnabled = true;
+        AESKey.assign(AESKeyLength, 0);
+    }
+    srand(time(0));
 }
 
 UClient::~UClient()
@@ -64,9 +69,13 @@ UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
         }
         // crypto client begin
 
-
-
-        //start_client(clientSocket, key, 16);
+        if (cryptoEnabled) {
+            start_client(clientSocket, AESKey.data(), AESKeyLength);
+            for (auto &x : AESKey) {
+                printf("%.2x", x);
+            }
+            printf("\n");
+        }
 
         // crypto client end
         recvHandlingLoopThread = std::thread(&UClient::recvHandlingLoop, this);

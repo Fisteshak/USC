@@ -12,7 +12,7 @@
 
 using namespace std;
 
-UServer server("127.0.0.1", 9554, 50);
+UServer server("127.0.0.1", 9554, 50, UServer::CRYPTO_ENABLED);
 
 struct user{
     std::string name = "";
@@ -95,10 +95,6 @@ void conn_handler(UServer::Client& cl)
 
 int main()
 {
-
-    #ifndef DEBUG
-    std::cerr.setstate(std::ios_base::failbit);  //отключить вывод cerr
-    #endif
 
     server.setDataHandler(data_handler);
     server.setDisconnHandler(disconn_handler);
