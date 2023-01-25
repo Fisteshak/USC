@@ -51,6 +51,10 @@ public:
     //тип обработчика принятия соединения
     using ConnHandler = std::function <void()>;
 
+    using tbyte = uint8_t;
+    using uint = unsigned int;
+
+
     //установить обработчик получения данных
     void setDataHandler(const DataHandler handler);
     //установить обработчик принятия соединения

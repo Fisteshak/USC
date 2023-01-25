@@ -33,6 +33,9 @@ private:
     using DataHandler = std::function <void(DataBuffer&, Client&)>;
     //тип обработчика принятия соединения
     using ConnHandler = std::function <void(Client&)>;
+    using tbyte = uint8_t;
+    using uint = unsigned int;
+
 
 public:
 

@@ -312,12 +312,12 @@ void UServer::handlingLoop()
                     int newConnInd = addConnection(new_conn);
 
                     //
-                    if (CRYPTO_ENABLED)
-                    {
-                        start_server(clients[newConnInd].fd, AESKey.data(), AESKeyLength / 8);
-                        clients[newConnInd].initCrypto();
+                    // if (CRYPTO_ENABLED)
+                    // {
+                    //     start_server(clients[newConnInd].fd, AESKey.data(), AESKeyLength / 8);
+                    //     clients[newConnInd].initCrypto();
 
-                    }
+                    // }
                     //
 
                     if (connHandler) {
