@@ -11,6 +11,8 @@
 #include <WS2tcpip.h>
 #include "windows.h"
 
+#include "../crypto/aes.h"
+
 using Socket = SOCKET;
 
 #ifndef SOCKET_ERROR
@@ -111,10 +113,12 @@ private:
 
     // crypto
 
+    void initCrypto(int sock,  int AESKeyLength);
+
     bool cryptoEnabled = false;
     uint32_t AESKeyLength = 16;
     uint32_t RSAKeyLength = 4096;
     std::vector<tbyte> AESKey;
-
+    aes* AESObj;
 
 };

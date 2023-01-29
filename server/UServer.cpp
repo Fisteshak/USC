@@ -587,7 +587,7 @@ int UServer::recvPacket(const UServer::Client& sock, DataBufferStr& data)
     return recievedData;
 }
 
-void UServer::sendPacket(const DataBuffer& data)
+void UServer::sendPacket(DataBuffer& data)
 {
     int handledConnections = 1;
 
@@ -606,7 +606,7 @@ void UServer::sendPacket(const DataBuffer& data)
     return;
 }
 
-void UServer::sendPacket(const DataBufferStr& data)
+void UServer::sendPacket(DataBufferStr& data)
 {
     int handledConnections = 1;
 
@@ -665,14 +665,19 @@ Socket UServer::Client::getSocket()
     return fd;
 }
 
-UServer::Client::status UServer::Client::sendPacket(const DataBuffer& data)
+UServer::Client::status UServer::Client::sendPacket(DataBuffer& data)
 {
     if (_status != status::connected or data.size() == 0) {
         return _status;
     }
 
-    int len = data.size();
-    int dataLen = sendAll(fd, (char*)data.data(), len);
+    uint64_t len = data.size();
+
+    //tbyte* d = data.data();
+
+    tbyte* cipheredData = this->AESObj->encryptCBC(len, data.data(), this->AESKey.data());
+
+    int dataLen = sendAll(fd, (char*)cipheredData, len);
 
     if (dataLen == SOCKET_ERROR) {
         _status = status::error_send_data;
@@ -684,18 +689,25 @@ UServer::Client::status UServer::Client::sendPacket(const DataBuffer& data)
         int clientInd = std::find(owner->clients.begin(), owner->clients.end(), *this) - owner->clients.begin();
         owner->closeConnection(clientInd);
     }
+
+    delete[] cipheredData;
 
     return _status;
 }
 
-UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
+UServer::Client::status UServer::Client::sendPacket(DataBufferStr& data)
 {
     if (_status != status::connected or data.size() == 0) {
         return _status;
     }
 
-    int len = data.size();
-    int dataLen = sendAll(fd, data.data(), len);
+    uint64_t len = data.size();
+
+    //tbyte* d = data.data();
+
+    tbyte* cipheredData = this->AESObj->encryptCBC(len, (tbyte*)data.data(), this->AESKey.data());
+
+    int dataLen = sendAll(fd, (char*)cipheredData, len);
 
     if (dataLen == SOCKET_ERROR) {
         _status = status::error_send_data;
@@ -707,6 +719,8 @@ UServer::Client::status UServer::Client::sendPacket(const DataBufferStr& data)
         int clientInd = std::find(owner->clients.begin(), owner->clients.end(), *this) - owner->clients.begin();
         owner->closeConnection(clientInd);
     }
+
+    delete[] cipheredData;
 
     return _status;
 }

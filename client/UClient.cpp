@@ -6,6 +6,7 @@
 
 
 #include "../crypto/key_exchg.h"
+#include "../crypto/aes.h"
 #include "UClient.h"
 
 UClient::UClient(uint16_t flags)
@@ -32,6 +33,13 @@ bool UClient::initWinsock()
         return false;
     }
     return true;
+}
+
+void UClient::initCrypto(int sock,  int AESKeyLength){
+    // если уже запускали
+    AESKey.assign(AESKeyLength, 0);
+    start_client(clientSocket, AESKey.data(), AESKeyLength);
+    AESObj = new aes(128, CONST_AES_CBC);
 }
 
 UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
@@ -70,7 +78,7 @@ UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
         // crypto client begin
 
         if (cryptoEnabled) {
-            start_client(clientSocket, AESKey.data(), AESKeyLength);
+            initCrypto(clientSocket, AESKeyLength);
             for (auto &x : AESKey) {
                 printf("%.2x", x);
             }
@@ -212,7 +220,7 @@ int UClient::recvAll(char* data, const int len) {
     while (total < len) {
         received = recv(clientSocket, data + total, len - total, 0);
         if (received == SOCKET_ERROR) {
-            return SOCKET_ERROR;
+            return 0;
         }
         if (received == 0) {
             // disconnected
@@ -228,37 +236,46 @@ int UClient::recvPacket(DataBuffer& data)
     char dataLenArr[4]{};
 
     //получить 4 байта длины
-    int recievedData = recvAll(dataLenArr, 4);
+    uint64_t receivedData = recvAll(dataLenArr, 4);
 
-    if (recievedData <= 0)  {
-        return recievedData;
+    if (receivedData <= 0)  {
+        return receivedData;
     }
 
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll((char*)data.data(), dataLen);
+    receivedData = recvAll((char*)data.data(), dataLen);
 
-    return recievedData;
+    tbyte* plainData = this->AESObj->decryptCBC(receivedData, data.data(), this->AESKey.data());
+    memcpy(data.data(), plainData, receivedData);
+    delete[] plainData;
+
+    return receivedData;
 }
+
 
 int UClient::recvPacket(DataBufferStr& data)
 {
     char dataLenArr[4]{};
 
     //получить 4 байта длины
-    int recievedData = recvAll(dataLenArr, 4);
+    uint64_t receivedData = recvAll(dataLenArr, 4);
 
-    if (recievedData <= 0)  {
-        return recievedData;
+    if (receivedData <= 0)  {
+        return receivedData;
     }
 
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll(data.data(), dataLen);
+    receivedData = recvAll((char*)data.data(), dataLen);
 
-    return recievedData;
+    tbyte* plainData = this->AESObj->decryptCBC(receivedData, (tbyte*)data.data(), this->AESKey.data());
+    memcpy(data.data(), plainData, receivedData);
+    delete[] plainData;
+
+    return receivedData;
 }
 
 UClient::status UClient::getStatus()

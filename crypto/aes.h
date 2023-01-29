@@ -261,8 +261,8 @@ public:
     aes(uint enc_key = CONST_AES_128, uint enc_mode = CONST_AES_CBC);
 
     // encrypting/decrypting methods
-    int encryptCBC(uint64_t &len, tbyte* &buf, tbyte* key);          // encrypt data in CBC mode
-    int decryptCBC(uint64_t &len, tbyte* &buf, tbyte* key);          // decrypt data in CBC mode
+    tbyte* encryptCBC(uint64_t &len, tbyte* buf, tbyte* key);          // encrypt data in CBC mode
+    tbyte* decryptCBC(uint64_t &len, tbyte* buf, tbyte* key);          // decrypt data in CBC mode
     int encryptCBC(const string & file_name, tbyte* key);            // encrypt file in CBC mode
     int decryptCBC(const string & file_name, tbyte* key);            // decrypt file in CBC mode
 
@@ -291,7 +291,7 @@ private:
     void decryptBlock();                                             // decrypt 1 block
 
     // utilities
-    tbyte* addPadding(uint64_t &len, tbyte* &buf);                   // add PKCS7 padding; (!!!) usage: buf = addPadding(len, buf)
+    tbyte* addPadding(uint64_t &len, tbyte* buf);                   // add PKCS7 padding; (!!!) usage: buf = addPadding(len, buf)
     int addPadding(const string &filename);
     int removePadding(const string &filename);
     tbyte* removePadding(uint64_t &len, tbyte* &buf);                // remove PKCS7 padding; same usage

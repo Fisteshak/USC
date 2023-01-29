@@ -203,7 +203,7 @@ void aes::decryptBlock()
 }
 
 // it disposes input buf and returns the new one
-tbyte *aes::addPadding(uint64_t &len, tbyte *&buf)
+tbyte *aes::addPadding(uint64_t &len, tbyte *buf)
 {
 
     // how much bytes should be added
@@ -222,8 +222,8 @@ tbyte *aes::addPadding(uint64_t &len, tbyte *&buf)
     }
 
     // update input parameters
-    delete []buf; // free(buf);
-    buf = nullptr;
+    // delete []buf; // free(buf);
+    // buf = nullptr;
     len += bytes_to_add;
 
     return result;
@@ -256,13 +256,13 @@ int aes::addPadding(const string &filename)
         tbyte data = num_bytes_to_add % block_size;
         file.write((const char*)&data,sizeof(data));
     }
-        
+
     file.close();
     return num_bytes_to_add;
 }
 
 // overload to encrypt buffer of bytes
-int aes::encryptCBC(uint64_t &len, tbyte *&buf, tbyte *key)
+tbyte* aes::encryptCBC(uint64_t &len, tbyte *buf, tbyte *key)
 {
 
     uint64_t cnt = 0;
@@ -329,11 +329,11 @@ int aes::encryptCBC(uint64_t &len, tbyte *&buf, tbyte *key)
         prev_state = state;
     }
 
-    delete []buf; // free(buf);
-    buf = res;
+    //delete []buf; // free(buf);
+    //buf = res;
     len = res_cnt;
 
-    return 0;
+    return res;
 }
 
 // overload for encrypting file
@@ -518,7 +518,7 @@ int aes::decryptCBC(const string &file_name, tbyte *key)
 }
 
 // overload for decrypting buffer of bytes
-int aes::decryptCBC(uint64_t &len, tbyte *&buf, tbyte *key)
+tbyte* aes::decryptCBC(uint64_t &len, tbyte *buf, tbyte *key)
 {
 
     vector<vector<tbyte>> init_vec(4, vector<tbyte>(Nb, 0));
@@ -571,9 +571,8 @@ int aes::decryptCBC(uint64_t &len, tbyte *&buf, tbyte *key)
 
     res = removePadding(res_cnt, res);
     len = res_cnt;
-    buf = res;
-
-    return 0;
+    //buf = res;
+    return res;
 }
 
 // just print vector

@@ -80,8 +80,8 @@ public:
     //установить обработчик отключения соединения
     void setDisconnHandler(const ConnHandler handler);
     //отправить данные всем клиентам
-    void sendPacket(const DataBuffer& data);
-    void sendPacket(const DataBufferStr& data);
+    void sendPacket(DataBuffer& data);
+    void sendPacket(DataBufferStr& data);
     //получить статус
     status getStatus();
     //получить порт
@@ -218,9 +218,9 @@ public:
 
     ~Client();
     //отправить пакет данных
-    UServer::Client::status sendPacket(const DataBuffer& data);
+    UServer::Client::status sendPacket(DataBuffer& data);
     //отправить пакет данных
-    UServer::Client::status sendPacket(const DataBufferStr& data);
+    UServer::Client::status sendPacket(DataBufferStr& data);
 
     //получить IP клиента в виде строки
     std::string getIPstr();
