@@ -643,7 +643,6 @@ void UServer::setDisconnHandler(const ConnHandler handler)
     return;
 }
 
-
 void UServer::disconnect(UServer::Client& cl)
 {
     auto clNum = find(clients.begin(), clients.end(), cl) - clients.begin();
@@ -665,6 +664,14 @@ Socket UServer::Client::getSocket()
     return fd;
 }
 
+void dbg_printf(tbyte *ptr, int len){
+    for (int i = 0 ; i < len; i++){
+        printf("%.2x", *(ptr + i));
+    }
+    printf("\n");
+    return;
+}
+
 UServer::Client::status UServer::Client::sendPacket(DataBuffer& data)
 {
     if (_status != status::connected or data.size() == 0) {
@@ -675,7 +682,24 @@ UServer::Client::status UServer::Client::sendPacket(DataBuffer& data)
 
     //tbyte* d = data.data();
 
+    printf("AESKey:\n");
+    dbg_printf(AESKey.data(), AESKey.size());
+
+
+
     tbyte* cipheredData = this->AESObj->encryptCBC(len, data.data(), this->AESKey.data());
+
+    printf("Ciphered data:\n");
+    dbg_printf(cipheredData, len);
+
+    //ключ, длина
+    //за/дешифрованные
+
+    ///  проверить все сторонние данные, от которых может зависеть дешифрование
+    ///  руцками определить Nk, Nb, ....
+
+    // tbyte* plainData = this->AESObj->decryptCBC(len, data.data(), this->AESKey.data());
+
 
     int dataLen = sendAll(fd, (char*)cipheredData, len);
 
@@ -703,9 +727,13 @@ UServer::Client::status UServer::Client::sendPacket(DataBufferStr& data)
 
     uint64_t len = data.size();
 
-    //tbyte* d = data.data();
+    printf("AESKey:\n");
+    dbg_printf(AESKey.data(), AESKey.size());
 
     tbyte* cipheredData = this->AESObj->encryptCBC(len, (tbyte*)data.data(), this->AESKey.data());
+
+    printf("Ciphered data:\n");
+    dbg_printf(cipheredData, len);
 
     int dataLen = sendAll(fd, (char*)cipheredData, len);
 

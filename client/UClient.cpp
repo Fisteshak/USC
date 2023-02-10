@@ -79,10 +79,10 @@ UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
 
         if (cryptoEnabled) {
             initCrypto(clientSocket, AESKeyLength);
-            for (auto &x : AESKey) {
-                printf("%.2x", x);
-            }
-            printf("\n");
+            // for (auto &x : AESKey) {
+            //     printf("%.2x", x);
+            // }
+            // printf("\n");
         }
 
         // crypto client end
@@ -231,6 +231,15 @@ int UClient::recvAll(char* data, const int len) {
     return total;
 }
 
+void dbg_printf(tbyte *ptr, int len){
+    for (int i = 0 ; i < len; i++){
+        printf("%.2x", *(ptr + i));
+    }
+    printf("\n");
+    return;
+}
+
+
 int UClient::recvPacket(DataBuffer& data)
 {
     char dataLenArr[4]{};
@@ -247,7 +256,18 @@ int UClient::recvPacket(DataBuffer& data)
 
     receivedData = recvAll((char*)data.data(), dataLen);
 
+    printf("AESKey:\n");
+    dbg_printf(AESKey.data(), AESKey.size());
+
+    printf("Ciphered data:\n");
+    dbg_printf(data.data(), data.size());
+
     tbyte* plainData = this->AESObj->decryptCBC(receivedData, data.data(), this->AESKey.data());
+
+    printf("Deciphered data:\n");
+    dbg_printf(plainData, receivedData);
+
+    cout << endl;
     memcpy(data.data(), plainData, receivedData);
     delete[] plainData;
 
@@ -271,7 +291,17 @@ int UClient::recvPacket(DataBufferStr& data)
 
     receivedData = recvAll((char*)data.data(), dataLen);
 
+    printf("AESKey:\n");
+    dbg_printf(AESKey.data(), AESKey.size());
+
+    printf("Ciphered data:\n");
+    dbg_printf((tbyte*)data.data(), data.size());
+
     tbyte* plainData = this->AESObj->decryptCBC(receivedData, (tbyte*)data.data(), this->AESKey.data());
+
+    printf("Deciphered data:\n");
+    dbg_printf(plainData, receivedData);
+
     memcpy(data.data(), plainData, receivedData);
     delete[] plainData;
 

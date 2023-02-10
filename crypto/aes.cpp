@@ -261,6 +261,13 @@ int aes::addPadding(const string &filename)
     return num_bytes_to_add;
 }
 
+// void dbg_printf(tbyte *ptr, int len){
+//     for (int i = 0 ; i < len; i++){
+//         printf("%.2x", *(ptr + i));
+//     }
+//     printf("\n");
+// }
+
 // overload to encrypt buffer of bytes
 tbyte* aes::encryptCBC(uint64_t &len, tbyte *buf, tbyte *key)
 {
@@ -332,6 +339,8 @@ tbyte* aes::encryptCBC(uint64_t &len, tbyte *buf, tbyte *key)
     //delete []buf; // free(buf);
     //buf = res;
     len = res_cnt;
+
+    //dbg_printf(res, len);
 
     return res;
 }
