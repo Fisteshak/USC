@@ -229,8 +229,21 @@ tbyte *aes::addPadding(uint64_t &len, tbyte *buf)
     return result;
 }
 
+
+void dbg_printf2(tbyte *ptr, int len){
+    for (int i = 0 ; i < len; i++){
+        printf("%.2x", *(ptr + i));
+    }
+    printf("\n");
+    return;
+}
+
+
 tbyte *aes::removePadding(uint64_t &len, tbyte *&buf)
 {
+    // последние несколько байт не равны (некорректный паддинг) =>  bytes_to_remove>len => len - bytes_to_remove < 0 => bad_alloc
+    //cout << "removePadding dbg unciphered\n";
+    //dbg_printf2(buf, len);
     tbyte bytes_to_remove = buf[len - 1] == 0 ? enc_key >> 3 : buf[len - 1];
     tbyte *result = new tbyte[len - bytes_to_remove];
     memcpy(result, buf, len - bytes_to_remove);
@@ -544,8 +557,21 @@ tbyte* aes::decryptCBC(uint64_t &len, tbyte *buf, tbyte *key)
             cnt++;
         }
 
-    auto prev_cipher = init_vec;
 
+    // Я ВСТАВИЛ
+    // convert bytes to 4xNk matrix w
+    int ind = 0;
+    for (tbyte j = 0; j < Nk; ++j)
+    {
+        for (tbyte i = 0; i < 4; ++i)
+        {
+            w[i][j] = key[ind];
+            ind++;
+        }
+    }
+    keyExpansion();
+
+    auto prev_cipher = init_vec;
     while (cnt < len)
     {
 

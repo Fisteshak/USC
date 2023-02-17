@@ -549,42 +549,56 @@ int UServer::recvAll(const Socket sock, char* data, const int len) {
     return total;
 }
 
-int UServer::recvPacket(const UServer::Client& sock, DataBuffer& data)
+int UServer::recvPacket( UServer::Client& sock, DataBuffer& data)
 {
     char dataLenArr[4]{};
 
     //получить 4 байта длины
-    int recievedData = recvAll(sock.fd, dataLenArr, 4);
+    uint64_t receivedData = recvAll(sock.fd, dataLenArr, 4);
 
-    if (recievedData <= 0)  {
-        return recievedData;
+    if (receivedData <= 0 or receivedData >= UINT64_MAX - 10) {
+        return receivedData;
     }
 
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll(sock.fd, (char*)data.data(), dataLen);
+    receivedData = recvAll(sock.fd, (char*)data.data(), dataLen);
 
-    return recievedData;
+    tbyte* plainData = sock.AESObj->decryptCBC(receivedData, (tbyte*)data.data(), sock.AESKey.data());
+
+    data.resize(receivedData);
+
+    memcpy(data.data(), plainData, receivedData);
+    delete[] plainData;
+
+    return receivedData;
 }
 
-int UServer::recvPacket(const UServer::Client& sock, DataBufferStr& data)
+int UServer::recvPacket(UServer::Client& sock, DataBufferStr& data)
 {
     char dataLenArr[4]{};
 
     //получить 4 байта длины
-    int recievedData = recvAll(sock.fd, dataLenArr, 4);
+    uint64_t receivedData = recvAll(sock.fd, dataLenArr, 4);
 
-    if (recievedData <= 0)  {
-        return recievedData;
+    if (receivedData <= 0 or receivedData >= UINT64_MAX - 10) {
+        return receivedData;
     }
 
     int dataLen = *(int *)dataLenArr;
     data.resize(dataLen);
 
-    recievedData = recvAll(sock.fd, data.data(), dataLen);
+    receivedData = recvAll(sock.fd, data.data(), dataLen);
 
-    return recievedData;
+    tbyte* plainData = sock.AESObj->decryptCBC(receivedData, (tbyte*)data.data(), sock.AESKey.data());
+
+    data.resize(receivedData);
+
+    memcpy(data.data(), plainData, receivedData);
+    delete[] plainData;
+
+    return receivedData;
 }
 
 void UServer::sendPacket(DataBuffer& data)
@@ -672,6 +686,15 @@ void dbg_printf(tbyte *ptr, int len){
     return;
 }
 
+void dbg_printf_str(tbyte *ptr, int len){
+    for (int i = 0 ; i < len; i++){
+        printf("%c", *(ptr + i));
+    }
+    printf("\n");
+    return;
+}
+
+
 UServer::Client::status UServer::Client::sendPacket(DataBuffer& data)
 {
     if (_status != status::connected or data.size() == 0) {
@@ -682,15 +705,19 @@ UServer::Client::status UServer::Client::sendPacket(DataBuffer& data)
 
     //tbyte* d = data.data();
 
-    printf("AESKey:\n");
-    dbg_printf(AESKey.data(), AESKey.size());
-
+    // printf("AESKey:\n");
+    // dbg_printf(AESKey.data(), AESKey.size());
 
 
     tbyte* cipheredData = this->AESObj->encryptCBC(len, data.data(), this->AESKey.data());
 
-    printf("Ciphered data:\n");
-    dbg_printf(cipheredData, len);
+    // printf("Ciphered data:\n");
+    // dbg_printf(cipheredData, len);
+
+    //tbyte* decipheredData = this->AESObj->decryptCBC(len, (tbyte*)cipheredData, this->AESKey.data());
+
+    // printf("Deciphered data:\n");
+    // dbg_printf_str(decipheredData, len);
 
     //ключ, длина
     //за/дешифрованные
@@ -727,13 +754,30 @@ UServer::Client::status UServer::Client::sendPacket(DataBufferStr& data)
 
     uint64_t len = data.size();
 
-    printf("AESKey:\n");
-    dbg_printf(AESKey.data(), AESKey.size());
+    //tbyte* d = data.data();
+
+    // printf("AESKey:\n");
+    // dbg_printf(AESKey.data(), AESKey.size());
+
 
     tbyte* cipheredData = this->AESObj->encryptCBC(len, (tbyte*)data.data(), this->AESKey.data());
 
-    printf("Ciphered data:\n");
-    dbg_printf(cipheredData, len);
+    // printf("Ciphered data:\n");
+    // dbg_printf(cipheredData, len);
+
+    //tbyte* decipheredData = this->AESObj->decryptCBC(len, (tbyte*)cipheredData, this->AESKey.data());
+
+    // printf("Deciphered data:\n");
+    // dbg_printf_str(decipheredData, len);
+
+    //ключ, длина
+    //за/дешифрованные
+
+    ///  проверить все сторонние данные, от которых может зависеть дешифрование
+    ///  руцками определить Nk, Nb, ....
+
+    // tbyte* plainData = this->AESObj->decryptCBC(len, data.data(), this->AESKey.data());
+
 
     int dataLen = sendAll(fd, (char*)cipheredData, len);
 

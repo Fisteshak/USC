@@ -185,13 +185,18 @@ UClient::status UClient::sendPacket(const DataBuffer& data)
         return _status;
     }
 
-    int len = data.size();
-    int dataLen = sendAll((char*)data.data(), len);
+    uint64_t len = data.size();
+
+    tbyte* cipheredData = this->AESObj->encryptCBC(len, (tbyte*)data.data(), this->AESKey.data());
+
+    int dataLen = sendAll((char*)cipheredData, len);
 
     if (dataLen == SOCKET_ERROR) {
         disconnect();
         _status = status::error_send_data;
     }
+
+    delete[] cipheredData;
 
     return _status;
 }
@@ -202,13 +207,18 @@ UClient::status UClient::sendPacket(const DataBufferStr& data)
         return _status;
     }
 
-    int len = data.size();
-    int dataLen = sendAll(data.data(), len);
+    uint64_t len = data.size();
+
+    tbyte* cipheredData = this->AESObj->encryptCBC(len, (tbyte*)data.data(), this->AESKey.data());
+
+    int dataLen = sendAll((char*)cipheredData, len);
 
     if (dataLen == SOCKET_ERROR) {
         disconnect();
         _status = status::error_send_data;
     }
+
+    delete[] cipheredData;
 
     return _status;
 }
@@ -239,6 +249,13 @@ void dbg_printf(tbyte *ptr, int len){
     return;
 }
 
+void dbg_printf_str(tbyte *ptr, int len){
+    for (int i = 0 ; i < len; i++){
+        printf("%c", *(ptr + i));
+    }
+    printf("\n");
+    return;
+}
 
 int UClient::recvPacket(DataBuffer& data)
 {
@@ -256,18 +273,20 @@ int UClient::recvPacket(DataBuffer& data)
 
     receivedData = recvAll((char*)data.data(), dataLen);
 
-    printf("AESKey:\n");
-    dbg_printf(AESKey.data(), AESKey.size());
+    // printf("AESKey:\n");
+    // dbg_printf(AESKey.data(), AESKey.size());
 
-    printf("Ciphered data:\n");
-    dbg_printf(data.data(), data.size());
+    // printf("Ciphered data:\n");
+    // dbg_printf(data.data(), data.size());
 
     tbyte* plainData = this->AESObj->decryptCBC(receivedData, data.data(), this->AESKey.data());
 
-    printf("Deciphered data:\n");
-    dbg_printf(plainData, receivedData);
+    data.resize(receivedData);
 
-    cout << endl;
+    // printf("Deciphered data:\n");
+    // dbg_printf_str(plainData, receivedData);
+    // cout << endl;
+
     memcpy(data.data(), plainData, receivedData);
     delete[] plainData;
 
@@ -291,21 +310,25 @@ int UClient::recvPacket(DataBufferStr& data)
 
     receivedData = recvAll((char*)data.data(), dataLen);
 
-    printf("AESKey:\n");
-    dbg_printf(AESKey.data(), AESKey.size());
+    // printf("AESKey:\n");
+    // dbg_printf(AESKey.data(), AESKey.size());
 
-    printf("Ciphered data:\n");
-    dbg_printf((tbyte*)data.data(), data.size());
+    // printf("Ciphered data:\n");
+    // dbg_printf(data.data(), data.size());
 
     tbyte* plainData = this->AESObj->decryptCBC(receivedData, (tbyte*)data.data(), this->AESKey.data());
 
-    printf("Deciphered data:\n");
-    dbg_printf(plainData, receivedData);
+    data.resize(receivedData);
+
+    // printf("Deciphered data:\n");
+    // dbg_printf_str(plainData, receivedData);
+    // cout << endl;
 
     memcpy(data.data(), plainData, receivedData);
     delete[] plainData;
 
     return receivedData;
+
 }
 
 UClient::status UClient::getStatus()

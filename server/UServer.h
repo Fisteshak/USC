@@ -123,9 +123,9 @@ private:
     uint32_t addConnection(const Socket newConneection);
 
     //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
-    int recvPacket(const Client& sock, DataBuffer& data);
+    int recvPacket(Client& sock, DataBuffer& data);
     //получить пакет данных, возвращает 0 при отсоединении соединения, -1 при ошибке, иначе количество полученных байт
-    int recvPacket(const Client& sock, DataBufferStr& data);
+    int recvPacket(Client& sock, DataBufferStr& data);
     //закрывает и уничтожает массивы соединений fds/clients
     void cleanup();
     //отправляет len байт из массива data на сокет fd

@@ -34,10 +34,10 @@ void data_handler(UServer::DataBuffer& data, UServer::Client& cl)
     user* uref = std::any_cast <user*> (cl.ref);
     if (uref->name == "") {
         int i = 0;
-        while (data[i] != '\0'){
+        for (int i = 0; i < data.size(); i++) {
             uref->name.push_back(data[i]);
-            i++;
         }
+
         std::cout << "[server] " << uref->name << " connected\n";
     }
     else {
