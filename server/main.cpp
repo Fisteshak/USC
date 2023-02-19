@@ -13,6 +13,7 @@
 using namespace std;
 
 UServer server("127.0.0.1", 9554, 50, UServer::CRYPTO_ENABLED);
+//UServer server("127.0.0.1", 9554, 50);
 
 struct user{
     std::string name = "";

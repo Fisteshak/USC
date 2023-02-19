@@ -71,21 +71,21 @@ UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
     auto connRes = connect(clientSocket, (sockaddr*)&clientInfo, sizeof(clientInfo));
 
     if (connRes != SOCKET_ERROR) {
-        _status = status::connected;
-        if (connHandler) {
-            connHandler();
-        }
-        // crypto client begin
 
         if (cryptoEnabled) {
+            _status = status::key_generation;
             initCrypto(clientSocket, AESKeyLength);
             // for (auto &x : AESKey) {
             //     printf("%.2x", x);
             // }
             // printf("\n");
         }
+        _status = status::connected;
 
-        // crypto client end
+        if (connHandler) {
+            connHandler();
+        }
+
         recvHandlingLoopThread = std::thread(&UClient::recvHandlingLoop, this);
 
     }
@@ -135,8 +135,8 @@ void UClient::disconnect()
     if (_status != status::disconnected) {
         _status = status::disconnected;
         closesocket(clientSocket);
-        joinThreads();
     }
+    joinThreads();
 }
 
 void UClient::recvHandlingLoop()
@@ -165,6 +165,7 @@ void UClient::recvHandlingLoop()
             if (disconnHandler) {
                 disconnHandler();
             }
+
             closesocket(clientSocket);
         }
     }
@@ -185,18 +186,23 @@ UClient::status UClient::sendPacket(const DataBuffer& data)
         return _status;
     }
 
-    uint64_t len = data.size();
+    uint64_t dataToSendLen = data.size();
 
-    tbyte* cipheredData = this->AESObj->encryptCBC(len, (tbyte*)data.data(), this->AESKey.data());
+    int sendedDataLen;
 
-    int dataLen = sendAll((char*)cipheredData, len);
+    if (cryptoEnabled) {
+        tbyte* cipheredData = this->AESObj->encryptCBC(dataToSendLen, (tbyte*)data.data(), this->AESKey.data());
+        sendedDataLen = sendAll((char*)cipheredData, dataToSendLen);
+        delete[] cipheredData;
+    }
+    else {
+        sendedDataLen = sendAll((char*)data.data(), dataToSendLen);
+    }
 
-    if (dataLen == SOCKET_ERROR) {
+    if (sendedDataLen == SOCKET_ERROR) {
         disconnect();
         _status = status::error_send_data;
     }
-
-    delete[] cipheredData;
 
     return _status;
 }
@@ -207,18 +213,23 @@ UClient::status UClient::sendPacket(const DataBufferStr& data)
         return _status;
     }
 
-    uint64_t len = data.size();
+    uint64_t dataToSendLen = data.size();
 
-    tbyte* cipheredData = this->AESObj->encryptCBC(len, (tbyte*)data.data(), this->AESKey.data());
+    int sendedDataLen;
 
-    int dataLen = sendAll((char*)cipheredData, len);
+    if (cryptoEnabled) {
+        tbyte* cipheredData = this->AESObj->encryptCBC(dataToSendLen, (tbyte*)data.data(), this->AESKey.data());
+        sendedDataLen = sendAll((char*)cipheredData, dataToSendLen);
+        delete[] cipheredData;
+    }
+    else {
+        sendedDataLen = sendAll((char*)data.data(), dataToSendLen);
+    }
 
-    if (dataLen == SOCKET_ERROR) {
+    if (sendedDataLen == SOCKET_ERROR) {
         disconnect();
         _status = status::error_send_data;
     }
-
-    delete[] cipheredData;
 
     return _status;
 }
@@ -259,19 +270,20 @@ void dbg_printf_str(tbyte *ptr, int len){
 
 int UClient::recvPacket(DataBuffer& data)
 {
-    char dataLenArr[4]{};
+    char dataHeader[4]{};
 
     //получить 4 байта длины
-    uint64_t receivedData = recvAll(dataLenArr, 4);
+    uint64_t dataHeaderLen = recvAll(dataHeader, 4);
 
-    if (receivedData <= 0)  {
-        return receivedData;
+    if (dataHeaderLen <= 0)  {
+        return dataHeaderLen;
     }
 
-    int dataLen = *(int *)dataLenArr;
-    data.resize(dataLen);
+    int expectedDataLen = *(int *)dataHeader;
 
-    receivedData = recvAll((char*)data.data(), dataLen);
+    data.resize(expectedDataLen);
+
+    uint64_t recievedDataLen = recvAll((char*)data.data(), expectedDataLen);
 
     // printf("AESKey:\n");
     // dbg_printf(AESKey.data(), AESKey.size());
@@ -279,36 +291,37 @@ int UClient::recvPacket(DataBuffer& data)
     // printf("Ciphered data:\n");
     // dbg_printf(data.data(), data.size());
 
-    tbyte* plainData = this->AESObj->decryptCBC(receivedData, data.data(), this->AESKey.data());
-
-    data.resize(receivedData);
+    if (cryptoEnabled) {
+        tbyte* plainData = this->AESObj->decryptCBC(recievedDataLen, data.data(), this->AESKey.data());
+        data.resize(recievedDataLen);
+        memcpy(data.data(), plainData, recievedDataLen);
+        delete[] plainData;
+    }
 
     // printf("Deciphered data:\n");
     // dbg_printf_str(plainData, receivedData);
     // cout << endl;
 
-    memcpy(data.data(), plainData, receivedData);
-    delete[] plainData;
-
-    return receivedData;
+    return recievedDataLen;
 }
 
 
 int UClient::recvPacket(DataBufferStr& data)
 {
-    char dataLenArr[4]{};
+     char dataHeader[4]{};
 
     //получить 4 байта длины
-    uint64_t receivedData = recvAll(dataLenArr, 4);
+    uint64_t dataHeaderLen = recvAll(dataHeader, 4);
 
-    if (receivedData <= 0)  {
-        return receivedData;
+    if (dataHeaderLen <= 0)  {
+        return dataHeaderLen;
     }
 
-    int dataLen = *(int *)dataLenArr;
-    data.resize(dataLen);
+    int expectedDataLen = *(int *)dataHeader;
 
-    receivedData = recvAll((char*)data.data(), dataLen);
+    data.resize(expectedDataLen);
+
+    uint64_t recievedDataLen = recvAll((char*)data.data(), expectedDataLen);
 
     // printf("AESKey:\n");
     // dbg_printf(AESKey.data(), AESKey.size());
@@ -316,18 +329,19 @@ int UClient::recvPacket(DataBufferStr& data)
     // printf("Ciphered data:\n");
     // dbg_printf(data.data(), data.size());
 
-    tbyte* plainData = this->AESObj->decryptCBC(receivedData, (tbyte*)data.data(), this->AESKey.data());
-
-    data.resize(receivedData);
+    if (cryptoEnabled) {
+        tbyte* plainData = this->AESObj->decryptCBC(recievedDataLen, (tbyte*)data.data(), this->AESKey.data());
+        data.resize(recievedDataLen);
+        memcpy(data.data(), plainData, recievedDataLen);
+        delete[] plainData;
+    }
 
     // printf("Deciphered data:\n");
     // dbg_printf_str(plainData, receivedData);
     // cout << endl;
 
-    memcpy(data.data(), plainData, receivedData);
-    delete[] plainData;
+    return recievedDataLen;
 
-    return receivedData;
 
 }
 

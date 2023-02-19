@@ -28,6 +28,7 @@ public:
         disconnected = 1,
         connected,
         paused,
+        key_generation,
         error_socket_connect,
         error_socket_create,
         error_send_data,

@@ -190,9 +190,10 @@ public:
 
 
     enum status : uint8_t {
-        connected = 1,
-        disconnected = 2,
-        error_send_data = 3
+        connected,
+        disconnected,
+        key_generation,
+        error_send_data
     };
 
     Client& operator= (const Client &clientb)

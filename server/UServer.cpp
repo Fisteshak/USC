@@ -338,12 +338,12 @@ void UServer::handlingLoop()
                     if (cryptoEnabled)
                     {
                         // выработка общего ключа
-
                         clients[newConnInd].initCrypto(clients[newConnInd].fd, AESKeyLength);
                         // for (auto &x : clients[newConnInd].AESKey){
                         //     printf("%.2x", x);
                         // }
                         // printf("\n");
+                        clients[newConnInd]._status = Client::status::connected;
                     }
                     //
 
@@ -492,7 +492,12 @@ uint32_t UServer::addConnection(const Socket newConnection)
     fds[firstEmptyInd] = { newConnection, POLLIN, 0 }; //добавить в массив fds
 
     clients[firstEmptyInd].fd = fds[firstEmptyInd].fd;
-    clients[firstEmptyInd]._status = Client::connected;
+    if (cryptoEnabled) {
+        clients[firstEmptyInd]._status = Client::key_generation;
+    }
+    else {
+        clients[firstEmptyInd]._status = Client::connected;
+    }
     clients[firstEmptyInd].owner = this;
 
     return firstEmptyInd;
@@ -549,7 +554,7 @@ int UServer::recvAll(const Socket sock, char* data, const int len) {
     return total;
 }
 
-int UServer::recvPacket( UServer::Client& sock, DataBuffer& data)
+int UServer::recvPacket(UServer::Client& sock, DataBuffer& data)
 {
     char dataLenArr[4]{};
 
@@ -565,12 +570,13 @@ int UServer::recvPacket( UServer::Client& sock, DataBuffer& data)
 
     receivedData = recvAll(sock.fd, (char*)data.data(), dataLen);
 
-    tbyte* plainData = sock.AESObj->decryptCBC(receivedData, (tbyte*)data.data(), sock.AESKey.data());
+    if (cryptoEnabled) {
+        tbyte* plainData = sock.AESObj->decryptCBC(receivedData, (tbyte*)data.data(), sock.AESKey.data());
+        data.resize(receivedData);
+        memcpy(data.data(), plainData, receivedData);
+        delete[] plainData;
+    }
 
-    data.resize(receivedData);
-
-    memcpy(data.data(), plainData, receivedData);
-    delete[] plainData;
 
     return receivedData;
 }
@@ -591,12 +597,12 @@ int UServer::recvPacket(UServer::Client& sock, DataBufferStr& data)
 
     receivedData = recvAll(sock.fd, data.data(), dataLen);
 
-    tbyte* plainData = sock.AESObj->decryptCBC(receivedData, (tbyte*)data.data(), sock.AESKey.data());
-
-    data.resize(receivedData);
-
-    memcpy(data.data(), plainData, receivedData);
-    delete[] plainData;
+    if (cryptoEnabled) {
+        tbyte* plainData = sock.AESObj->decryptCBC(receivedData, (tbyte*)data.data(), sock.AESKey.data());
+        data.resize(receivedData);
+        memcpy(data.data(), plainData, receivedData);
+        delete[] plainData;
+    }
 
     return receivedData;
 }
@@ -701,36 +707,27 @@ UServer::Client::status UServer::Client::sendPacket(DataBuffer& data)
         return _status;
     }
 
-    uint64_t len = data.size();
-
-    //tbyte* d = data.data();
+    uint64_t dataToSendLen = data.size();
 
     // printf("AESKey:\n");
     // dbg_printf(AESKey.data(), AESKey.size());
 
+    int sendedDataLen;
 
-    tbyte* cipheredData = this->AESObj->encryptCBC(len, data.data(), this->AESKey.data());
+    if (owner->cryptoEnabled) {
+        tbyte* cipheredData = this->AESObj->encryptCBC(dataToSendLen, (tbyte*)data.data(), this->AESKey.data());
+        sendedDataLen = sendAll(fd, (char*)cipheredData, dataToSendLen);
+        delete[] cipheredData;
+    }
+    else {
+        sendedDataLen = sendAll(fd, (char*)data.data(), dataToSendLen);
+    }
 
     // printf("Ciphered data:\n");
     // dbg_printf(cipheredData, len);
 
-    //tbyte* decipheredData = this->AESObj->decryptCBC(len, (tbyte*)cipheredData, this->AESKey.data());
 
-    // printf("Deciphered data:\n");
-    // dbg_printf_str(decipheredData, len);
-
-    //ключ, длина
-    //за/дешифрованные
-
-    ///  проверить все сторонние данные, от которых может зависеть дешифрование
-    ///  руцками определить Nk, Nb, ....
-
-    // tbyte* plainData = this->AESObj->decryptCBC(len, data.data(), this->AESKey.data());
-
-
-    int dataLen = sendAll(fd, (char*)cipheredData, len);
-
-    if (dataLen == SOCKET_ERROR) {
+    if (sendedDataLen == SOCKET_ERROR) {
         _status = status::error_send_data;
 
         if (owner->disconnHandler) {
@@ -741,7 +738,6 @@ UServer::Client::status UServer::Client::sendPacket(DataBuffer& data)
         owner->closeConnection(clientInd);
     }
 
-    delete[] cipheredData;
 
     return _status;
 }
@@ -752,36 +748,27 @@ UServer::Client::status UServer::Client::sendPacket(DataBufferStr& data)
         return _status;
     }
 
-    uint64_t len = data.size();
-
-    //tbyte* d = data.data();
+    uint64_t dataToSendLen = data.size();
 
     // printf("AESKey:\n");
     // dbg_printf(AESKey.data(), AESKey.size());
 
+    int sendedDataLen;
 
-    tbyte* cipheredData = this->AESObj->encryptCBC(len, (tbyte*)data.data(), this->AESKey.data());
+    if (owner->cryptoEnabled) {
+        tbyte* cipheredData = this->AESObj->encryptCBC(dataToSendLen, (tbyte*)data.data(), this->AESKey.data());
+        sendedDataLen = sendAll(fd, (char*)cipheredData, dataToSendLen);
+        delete[] cipheredData;
+    }
+    else {
+        sendedDataLen = sendAll(fd, (char*)data.data(), dataToSendLen);
+    }
 
     // printf("Ciphered data:\n");
     // dbg_printf(cipheredData, len);
 
-    //tbyte* decipheredData = this->AESObj->decryptCBC(len, (tbyte*)cipheredData, this->AESKey.data());
 
-    // printf("Deciphered data:\n");
-    // dbg_printf_str(decipheredData, len);
-
-    //ключ, длина
-    //за/дешифрованные
-
-    ///  проверить все сторонние данные, от которых может зависеть дешифрование
-    ///  руцками определить Nk, Nb, ....
-
-    // tbyte* plainData = this->AESObj->decryptCBC(len, data.data(), this->AESKey.data());
-
-
-    int dataLen = sendAll(fd, (char*)cipheredData, len);
-
-    if (dataLen == SOCKET_ERROR) {
+    if (sendedDataLen == SOCKET_ERROR) {
         _status = status::error_send_data;
 
         if (owner->disconnHandler) {
@@ -792,7 +779,6 @@ UServer::Client::status UServer::Client::sendPacket(DataBufferStr& data)
         owner->closeConnection(clientInd);
     }
 
-    delete[] cipheredData;
 
     return _status;
 }

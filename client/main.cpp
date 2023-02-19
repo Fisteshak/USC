@@ -27,6 +27,7 @@ void disconn_handler()
 int main()
 {
     UClient client(UClient::CRYPTO_ENABLED);
+    //UClient client;
 
     client.setDataHandler(data_handler);
     client.setDisconnHandler(disconn_handler);
