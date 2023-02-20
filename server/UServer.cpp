@@ -344,6 +344,9 @@ void UServer::handlingLoop()
                         // }
                         // printf("\n");
                         clients[newConnInd]._status = Client::status::connected;
+
+                        std::string keyGeneratedMsg = "Key generated";
+                        clients[newConnInd].sendPacket(keyGeneratedMsg);
                     }
                     //
 

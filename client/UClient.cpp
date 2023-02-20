@@ -79,6 +79,12 @@ UClient::status UClient::connectTo(const std::string& IP, const uint32_t port)
             //     printf("%.2x", x);
             // }
             // printf("\n");
+            std:string keyGeneratedMsg;
+            recvPacket(keyGeneratedMsg);
+            if (keyGeneratedMsg != "Key generated") {
+                closesocket(clientSocket);
+		        return _status = status::error_socket_create;
+            }
         }
         _status = status::connected;
 

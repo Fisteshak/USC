@@ -221,7 +221,7 @@ string GetComputerName()
 
 int main(int argc, char *argv[])
 {
-    UClient client;
+    UClient client(UClient::CRYPTO_ENABLED);
 
     //IP и порт по умолчанию
     uint32_t port = 9554;

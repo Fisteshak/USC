@@ -26,7 +26,7 @@ using namespace std;
 using json = nlohmann::json;
 
 //UServer server("127.0.0.1", 9554, 50);
-UServer server(9554, 50);
+UServer server(9554, 50, UServer::CRYPTO_ENABLED);
 
 struct process
 {
