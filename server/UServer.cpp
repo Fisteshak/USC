@@ -268,6 +268,11 @@ bool UServer::setIP(const std::string& IP)
     }
 }
 
+std::string UServer::getIP()
+{
+    return listenerIP;
+}
+
 
 uint32_t UServer::Client::getIP()
 {

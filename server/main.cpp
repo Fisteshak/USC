@@ -94,12 +94,53 @@ void conn_handler(UServer::Client& cl)
     return;
 }
 
-int main()
+void parseAndSetIPAndPort(const string& IP_Port)
 {
+
+    if (IP_Port.find(":") != string::npos) {
+        //IP + port
+        try {
+            server.setPort(stoul(IP_Port.substr(IP_Port.find(":") + 1, IP_Port.size())));
+        } catch (std::exception) {
+            std::cout << "Invalid port\n";
+            exit(1);
+        }
+        bool err = server.setIP(IP_Port.substr(0, IP_Port.find(":")));
+        if (!err) {
+            std::cout << "Invalid IP\n";
+            exit(1);
+        }
+    } else {
+        if (IP_Port.find('.') != string::npos) {
+            //IP
+            bool err = server.setIP(IP_Port.substr(0, IP_Port.size()));
+            if (!err) {
+                std::cout << "Invalid IP\n";
+                exit(1);
+            }
+        }
+        else {
+            //Port
+            try {
+                server.setPort(stoul(IP_Port.substr(0, IP_Port.size())));
+            } catch (std::exception) {
+                std::cout << "Invalid port\n";
+                exit(1);
+            }
+        }
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc > 1) {
+        parseAndSetIPAndPort(argv[1]);
+    }
 
     server.setDataHandler(data_handler);
     server.setDisconnHandler(disconn_handler);
     server.setConnHandler(conn_handler);
+    std::cout << "Working on: " << server.getIP() << ' ' << server.getPort() << endl;
     server.run();
 
     std::cout << "[server] Server started working" << std::endl;
