@@ -338,15 +338,13 @@ void UServer::handlingLoop()
                     if (cryptoEnabled)
                     {
                         // выработка общего ключа
-                        clients[newConnInd].initCrypto(clients[newConnInd].fd, AESKeyLength);
-                        // for (auto &x : clients[newConnInd].AESKey){
-                        //     printf("%.2x", x);
-                        // }
-                        // printf("\n");
-                        clients[newConnInd]._status = Client::status::connected;
+                        clients[newConnInd]._status = Client::status::key_generation;
 
-                        std::string keyGeneratedMsg = "Key generated";
-                        clients[newConnInd].sendPacket(keyGeneratedMsg);
+                        clients[newConnInd].keyGenerationThread = new std::thread(&Client::initCrypto, &clients[newConnInd],
+                                                                                 clients[newConnInd].fd, AESKeyLength);
+
+                        //clients[newConnInd].initCrypto(clients[newConnInd].fd, AESKeyLength);
+
                     }
                     //
 
@@ -419,6 +417,17 @@ void UServer::Client::initCrypto(int sock,  int AESKeyLength){
     AESKey.assign(AESKeyLength, 0);
     start_server(sock, AESKey.data(), AESKeyLength, owner->e_main, owner->d_main, owner->n_main);
     AESObj = new aes(128, CONST_AES_CBC);
+
+    // for (auto &x : clients[newConnInd].AESKey){
+    //     printf("%.2x", x);
+    // }
+    // printf("\n");
+
+    _status = Client::status::connected;
+    std::string keyGeneratedMsg = "Key generated";
+    sendPacket(keyGeneratedMsg);
+
+    return;
 }
 
 
@@ -786,10 +795,20 @@ UServer::Client::status UServer::Client::sendPacket(DataBufferStr& data)
     return _status;
 }
 
+UServer::Client::Client()
+{
+
+}
 
 
 UServer::Client::~Client()
 {
+    if (keyGenerationThread != nullptr) {
+        if (keyGenerationThread->joinable()) {
+            keyGenerationThread->join();
+        }
+        delete keyGenerationThread;
+    }
 
 }
 

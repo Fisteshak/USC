@@ -6,7 +6,7 @@
 #include <vector>
 #include <functional>
 #include <any>
-#include <string>
+#include <memory>
 
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -171,6 +171,7 @@ private:
     uint32_t RSAKeyLength = 4096;
     gint e_main, d_main, n_main;
 
+
 };
 
 class UServer::Client
@@ -215,7 +216,7 @@ public:
     Socket getSocket();
     //пользовательская переменная
     std::any ref;
-    // client();
+    Client();
 
     ~Client();
     //отправить пакет данных
@@ -237,6 +238,8 @@ private:
     // crypto
     std::vector<tbyte> AESKey;
     aes* AESObj;
+
+    std::thread* keyGenerationThread = nullptr;
 
     //дескриптор сокета
     Socket fd;
