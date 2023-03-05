@@ -353,7 +353,7 @@ void UServer::handlingLoop()
                     }
                     //
 
-                    if (connHandler) {
+                    if (clients[newConnInd]._status == Client::status::connected and connHandler) {
                         connHandler(clients[newConnInd]);
                     }
 
@@ -381,24 +381,24 @@ void UServer::handlingLoop()
 				packetSize = recvPacket(clients[i], data_buf);
 
                 //если мы успешно прочитали данные
-                if (packetSize > 0) {
+                if (packetSize > 0  and clients[i]._status == Client::status::connected) {
                     if (dataHandler) {
                         dataHandler(data_buf, clients[i]);  //вызвать обработчик
                     }
                 }
 
                 //при нормальном закрытии соединения
-                if (packetSize == 0) {
+                if (packetSize == 0 and clients[i]._status == Client::status::connected) {
                     if (disconnHandler) {
                         disconnHandler(clients[i]);
                     }
                     closeConnection(i);
                 }
 
-                //TODO: добавить обработчик ошибок
+
                 //если recv вернул ошибку
                 //сокет закрываем в любом случае
-                if (packetSize == SOCKET_ERROR) {
+                if (packetSize == SOCKET_ERROR and clients[i]._status == Client::status::connected) {
                     //при "жестком" закрытии соединения
 
                     if (disconnHandler) {
